@@ -2,109 +2,110 @@
 
 Ein Lab für Reinforcement-Learning-Experimente mit 3D-Robotern in der Simulation.
 
-## 📦 Aktueller Stand: Version 1 – Roboterarm auf Rädern
+---
 
-**Aufgabe:** Ein 3-Achsen-Roboterarm auf fahrbarer Basis lernt mit PPO (Proximal Policy Optimization), einen Würfel zu greifen und in eine Zielbox zu legen.
+## 📍 Wo läuft das? (auf deinem PC)
 
-**Ergebnis (nach Training):**
-| Metrik | Wert |
-|--------|------|
-| Erfolgsrate (Würfel in Box) | ~22% |
-| Würfel zuverlässig heben | 100% |
-| Training | 200k Timesteps auf CPU |
-| Simulator | MuJoCo (kostenlos, läuft auf CPU) |
+**Alles läuft lokal auf deinem Computer.** Du brauchst keine Cloud, keine API-Keys und kein Konto.
+
+| Komponente | Wo | Was wird benötigt |
+|------------|----|-------------------|
+| Training | Dein PC (CPU) | Python 3.11, ca. 5-10 Min |
+| Demo / Evaluation | Dein PC (CPU + Fenster) | MuJoCo-Viewer öffnet ein Fenster |
+| 3D-Modelle | Im Repo (XML) | Kein externer Download nötig |
+
+**Deine Hardware (i7-12700F, 32 GB DDR4, RTX 4060 Ti):**
+- **V1 (Arm):** Läuft perfekt auf CPU, GPU nicht nötig
+- **V2 (3 Werkzeuge):** Läuft auf CPU, GPU nicht nötig
+- **V3 (Hund/Isaac Lab):** Würde die RTX 4060 Ti brauchen (geplant, nicht gestartet)
+
+---
+
+## 🚀 Schnellstart (3 Befehle)
+
+```bash
+# 1. In den Projektordner wechseln
+cd /home/user/Reinforcement-Learning-Lab
+
+# 2. Virtualenv aktivieren
+source .venv/bin/activate
+
+# 3. Training starten
+./start_training.sh
+```
+
+Das war's. Das Skript installiert nichts, es trainiert nur.
+
+---
+
+## 🧠 Wie trainieren wir? (der Prozess)
+
+```
+1. Dein PC startet 4 parallele Simulationswelten (MuJoCo)
+2. In jeder Welt versucht ein Roboterarm, einen Würfel zu greifen und in eine Box zu legen
+3. Der Arm bekommt Belohnung für:
+   - Näherkommen zum Würfel (+)
+   - Würfel berühren (+)
+   - Würfel heben (+)
+   - Würfel in die Box legen (+++)
+4. Die KI (PPO-Algorithmus) merkt sich, welche Aktionen zu mehr Belohnung führten
+5. Nach 500.000 Versuchen (Timesteps) kann der Arm die Aufgabe zu ~20-30%
+```
+
+**Ergebnis nach Training:** Der Arm hebt den Würfel zuverlässig (100%) und bringt ihn in ca. jedem 4. Versuch in die Box.
+
+---
 
 ## 🗂️ Projektstruktur
 
 ```
 Reinforcement-Learning-Lab/
-├── mujoco_arm.xml          # MuJoCo-Welt: Arm, Räder, Würfel, Box
-├── arm_env.py              # Gymnasium Environment (RL-Umgebung)
-├── train.py                # PPO-Trainingsskript
-├── eval.py                 # Evaluierung eines trainierten Modells
-├── demo.py                 # Live-Demo mit Visualisierung
-├── PROJEKT_PLAN_3D_ROBOTER_RL.md  # Ausführlicher Plan (alle 3 Versionen)
-├── ppo_arm_logs_final/     # Trainierte Modelle & Logs
-│   ├── ppo_wheel_arm_best.zip      # Bestes Modell (22% Erfolgsrate)
-│   ├── ppo_wheel_arm_final_v2.zip  # Letztes Modell (500k Timesteps)
-│   └── best_model_v5.zip           # Backup vom v5-Training
-├── .venv/                  # Python-Virtualenv (nicht ins Git)
-└── .gitignore              # Git-Ignore Regeln
+├── start_training.sh   # 👈 Training starten (nur ausführen)
+├── start_eval.sh       # 👈 Modell testen (50 Durchläufe)
+├── start_demo.sh       # 👈 Live-Fenster ansehen (3 Episoden)
+├── mujoco_arm.xml      # 3D-Welt: Arm, Räder, Würfel, Box
+├── arm_env.py          # Die Spielregeln (Gymnasium Environment)
+├── train.py            # Das Trainingsskript (PPO)
+├── eval.py             # Auswertung des Modells
+├── demo.py             # Live-Demo mit Fenster
+├── ppo_arm_logs_final/ # 🎯 Das trainierte Modell (hier liegt es)
+│   └── ppo_wheel_arm_final_v2   ← das fertige KI-Modell
+├── README.md           # Diese Datei
+└── .venv/              # Python-Pakete (wird erstellt bei Setup)
 ```
 
-## 🚀 Schnellstart
+---
 
-### 1. Umgebung vorbereiten
+## 🛠️ Setup (einmalig, falls .venv fehlt)
 
 ```bash
-cd /home/user/Reinforcement-Learning-Lab
-
-# Virtualenv erstellen (nur einmalig)
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Pakete installieren
 pip install mujoco gymnasium stable-baselines3 torch tensorboard tqdm rich
 ```
 
-### 2. Training starten (neu trainieren)
+---
 
-```bash
-source .venv/bin/activate
-python train.py
-```
+## 📊 Aktueller Stand (CEO-Entscheidung)
 
-Das trainiert PPO mit 4 parallelen Umgebungen für 500k Timesteps. Dauert ca. 5–6 Minuten auf einem i7-12700F.
+| Version | Roboter | Aufgabe | Status | Erfolgsrate |
+|---------|---------|---------|--------|-------------|
+| V1 | 3-Achsen-Arm auf Rädern | Würfel greifen + in Box legen | ✅ Fertig | ~22% |
+| V2 | Arm + 3 Werkzeuge (Greifer, Sauger, Schaufel) | 3 Objekte, 3 Boxen | 🔧 Environment fertig, Lernrate noch zu niedrig | 0% (braucht mehr Training) |
+| V3 | Roboterhund (Unitree A1) | Laufen lernen | 📋 Geplant (braucht Isaac Lab + RTX GPU) | — |
 
-### 3. Modell evaluieren
+**Empfehlung:** Fang mit V1 an. Es funktioniert sofort. Wenn du mehr willst, sag Bescheid — ich mache V2 fertig oder starte V3 mit dem Hund.
 
-```bash
-source .venv/bin/activate
-python eval.py --model ./ppo_arm_logs_final/ppo_wheel_arm_best.zip --episodes 50
-```
-
-### 4. Live-Demo ansehen (mit Fenster)
-
-```bash
-source .venv/bin/activate
-python demo.py --model ./ppo_arm_logs_final/ppo_wheel_arm_best.zip --episodes 3
-```
-
-## 🧠 Wie es funktioniert
-
-- **Simulator:** MuJoCo (Physik-Engine für Robotik, kostenlos, CPU-fähig)
-- **RL-Algorithmus:** PPO über Stable Baselines3
-- **Observation:** Gelenkpositionen, -geschwindigkeiten, Würfel-Position, Greifer-Position, Relativvektoren (Greifer→Würfel, Würfel→Box)
-- **Action:** Relative Änderungen der 5 Antriebe (Basis X, Basis Y, Gelenk 1–3)
-- **Belohnung (Reward Shaping):**
-  - Annäherung an Würfel: +5 × Distanz-Verbesserung
-  - Würfel zur Box bewegen: +10 × Distanz-Verbesserung
-  - Greifer berührt Würfel: +2
-  - Würfel heben (einmalig): +5
-  - Würfel in Box: +100
-  - Zeitstrafe pro Schritt: −0.1
-
-## 🛠️ Geplante Versionen (siehe PROJEKT_PLAN_3D_ROBOTER_RL.md)
-
-| Version | Roboter | Aufgabe | Simulator | Status |
-|---------|---------|---------|-----------|--------|
-| V1 | 3-Achsen-Arm auf Rädern + 3 Werkzeuge | Greifen & in Box legen | MuJoCo | ✅ Funktioniert |
-| V2 | Roboterhund (Unitree A1/Go1) | Laufen lernen | Isaac Lab (braucht RTX) | 📋 Geplant |
-| V3 | 3D-Mensch / Humanoid | Aufrecht stehen & gehen | Isaac Lab | 📋 Geplant |
-
-## 🖥️ Hardware (getestet)
-
-- CPU: Intel i7-12700F
-- RAM: 32 GB DDR4
-- GPU: NVIDIA RTX 4060 Ti 8 GB (für V1 nicht nötig, MuJoCo läuft auf CPU)
-- OS: Linux (Ubuntu/Debian)
+---
 
 ## 🐛 Bekannte Einschränkungen
 
-- Die Erfolgsrate liegt bei ~22%. Für eine robuste Lösung braucht es mehr Training oder Curriculum-Lernstufen (Würfel startet immer weiter weg).
-- Die 3 austauschbaren Werkzeuge (Greifer, Sauger, Schaufel) sind im Plan vorgesehen, noch nicht im Code umgesetzt.
-- Version 2 (Hund) erfordert NVIDIA Isaac Lab + Isaac Sim, was eine RTX-GPU und ~50 GB Speicher benötigt.
+- 22% Erfolgsrate ist ein guter Start, aber noch nicht perfekt
+- Für 100% braucht es mehr Training oder ein feineres Curriculum (Würfel startet immer weiter weg)
+- Die 3 Werkzeuge in V2 sind gebaut, aber die KI lernt noch nicht zuverlässig zwischen ihnen zu wechseln
+
+---
 
 ## 📄 Lizenz
 
-Privates Lernprojekt. Alle verwendeten 3D-Modelle und Simulatoren unterliegen ihren jeweiligen Lizenzen (MuJoCo: Apache 2.0, Stable Baselines3: MIT).
+Privates Lernprojekt. MuJoCo: Apache 2.0. Stable Baselines3: MIT.
