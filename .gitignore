@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.pyc
+
+# Virtualenv
+.venv
+
+# Training logs & models (groß, nicht ins Git)
+ppo_arm_logs*/
+ppo_arm_v2*/
+ppo_arm_v2_simple*/
+*.zip
+*.npz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
