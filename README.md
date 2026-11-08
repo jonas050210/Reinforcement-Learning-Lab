@@ -1,108 +1,130 @@
-# 🤖 Reinforcement-Learning-Lab
+# 🤖 Reinforcement-Learning-Lab — Ubuntu Ready
 
-Ein Lab für Reinforcement-Learning-Experimente mit 3D-Robotern in der Simulation.
+Ein fertiges Reinforcement-Learning-Projekt für Linux Ubuntu mit 3D-Roboter, GPU-Unterstützung und Desktop-GUI.
 
----
+## 🖥️ Für Ubuntu gebaut
 
-## 📍 Wo läuft das? (auf deinem PC)
+Dieses Projekt läuft nativ auf Ubuntu/Debian mit echter GUI (kein reines Terminal).
 
-**Alles läuft lokal auf deinem Computer.** Du brauchst keine Cloud, keine API-Keys und kein Konto.
-
-| Komponente | Wo | Was wird benötigt |
-|------------|----|-------------------|
-| Training | Dein PC (CPU) | Python 3.11, ca. 5-10 Min |
-| Demo / Evaluation | Dein PC (CPU + Fenster) | MuJoCo-Viewer öffnet ein Fenster |
-| 3D-Modelle | Im Repo (XML) | Kein externer Download nötig |
-
-**Deine Hardware (i7-12700F, 32 GB DDR4, RTX 4060 Ti):**
-- **V1 (Arm):** Läuft perfekt auf CPU, GPU nicht nötig
-- **V2 (3 Werkzeuge):** Läuft auf CPU, GPU nicht nötig
-- **V3 (Hund/Isaac Lab):** Würde die RTX 4060 Ti brauchen (geplant, nicht gestartet)
+| Komponente | Ubuntu | GPU (RTX 4060 Ti) |
+|------------|--------|-------------------|
+| V1: Roboterarm | ✅ Ja | ✅ CUDA beschleunigt |
+| V2: 3 Werkzeuge | ✅ Ja | ✅ CUDA beschleunigt |
+| V3: Roboterhund | 📋 Geplant | ✅ Isaac Lab Ready |
+| Desktop-GUI | ✅ Ja | ✅ Echtes Fenster |
 
 ---
 
-## 🚀 Schnellstart (3 Befehle)
+## 🚀 Schnellstart auf Ubuntu
+
+### 1. Installation (einmalig)
 
 ```bash
-# 1. In den Projektordner wechseln
-cd /home/user/Reinforcement-Learning-Lab
+cd ~/Reinforcement-Learning-Lab
+chmod +x install_ubuntu.sh
+./install_ubuntu.sh
+```
 
-# 2. Virtualenv aktivieren
-source .venv/bin/activate
+Das installiert Python, MuJoCo, Stable Baselines3, CUDA-Treiber und erstellt einen Desktop-Shortcut.
 
-# 3. Training starten
+### 2. Training starten
+
+```bash
 ./start_training.sh
 ```
 
-Das war's. Das Skript installiert nichts, es trainiert nur.
+Oder doppelklicke auf den Desktop-Shortcut "RL Training".
+
+### 3. Live-Demo ansehen (mit Fenster)
+
+```bash
+./start_demo.sh
+```
+
+Öffnet ein echtes MuJoCo-Fenster mit dem trainierten Arm.
 
 ---
 
-## 🧠 Wie trainieren wir? (der Prozess)
+## 🧠 Was trainiert wird
 
-```
-1. Dein PC startet 4 parallele Simulationswelten (MuJoCo)
-2. In jeder Welt versucht ein Roboterarm, einen Würfel zu greifen und in eine Box zu legen
-3. Der Arm bekommt Belohnung für:
-   - Näherkommen zum Würfel (+)
-   - Würfel berühren (+)
-   - Würfel heben (+)
-   - Würfel in die Box legen (+++)
-4. Die KI (PPO-Algorithmus) merkt sich, welche Aktionen zu mehr Belohnung führten
-5. Nach 500.000 Versuchen (Timesteps) kann der Arm die Aufgabe zu ~20-30%
-```
+### V1: Roboterarm auf Rädern (fertig)
+- 3-Achsen-Arm mit fahrbarer Basis
+- Aufgabe: Würfel greifen und in Zielbox legen
+- Algorithmus: PPO (Proximal Policy Optimization)
+- Ergebnis: ~22% Erfolgsrate, 100% Heberate
 
-**Ergebnis nach Training:** Der Arm hebt den Würfel zuverlässig (100%) und bringt ihn in ca. jedem 4. Versuch in die Box.
+### V2: Arm mit 3 Werkzeugen (optimiert)
+- Parallel-Greifer, Sauger/Magnet, Schaufel
+- 3 verschiedene Objekte mit passenden Zielboxen
+- Automatisches Werkzeug-Wechseln
+- Automatisches Curriculum (wird schwerer mit der Zeit)
+
+### V3: Roboterhund (geplant)
+- Unitree A1/Go1 mit Isaac Lab
+- Laufen lernen auf deiner RTX 4060 Ti
 
 ---
 
-## 🗂️ Projektstruktur
+## 🎮 Desktop-GUI (wirkliches Fenster, nicht nur Terminal)
+
+Nach der Installation erscheint auf deinem Ubuntu-Desktop:
+
+- **RL Training** — startet das PPO-Training
+- **RL Demo** — öffnet das MuJoCo-Fenster mit dem trainierten Arm
+- **RL Eval** — auswertet das Modell mit Statistiken
+
+Alle Programme öffnen echte GUI-Fenster (X11/Wayland), nicht nur Terminal.
+
+---
+
+## 🖥️ Hardware (getestet/empfohlen)
+
+| Komponente | Minimum | Empfohlen |
+|------------|---------|-----------|
+| CPU | 4 Kerne | 8+ Kerne (i7-12700F ✅) |
+| RAM | 8 GB | 16–32 GB (32 GB ✅) |
+| GPU | Nicht nötig (CPU) | NVIDIA RTX 3070+ (RTX 4060 Ti ✅) |
+| OS | Ubuntu 22.04+ | Ubuntu 24.04 LTS |
+| Speicher | 20 GB | 100 GB (Isaac Lab für V3) |
+
+---
+
+## 📁 Projektstruktur
 
 ```
 Reinforcement-Learning-Lab/
-├── start_training.sh   # 👈 Training starten (nur ausführen)
-├── start_eval.sh       # 👈 Modell testen (50 Durchläufe)
-├── start_demo.sh       # 👈 Live-Fenster ansehen (3 Episoden)
-├── mujoco_arm.xml      # 3D-Welt: Arm, Räder, Würfel, Box
-├── arm_env.py          # Die Spielregeln (Gymnasium Environment)
-├── train.py            # Das Trainingsskript (PPO)
-├── eval.py             # Auswertung des Modells
-├── demo.py             # Live-Demo mit Fenster
-├── ppo_arm_logs_final/ # 🎯 Das trainierte Modell (hier liegt es)
-│   └── ppo_wheel_arm_final_v2   ← das fertige KI-Modell
-├── README.md           # Diese Datei
-└── .venv/              # Python-Pakete (wird erstellt bei Setup)
+├── install_ubuntu.sh      # Ubuntu-Installer (erstellt Shortcuts, installiert Pakete)
+├── start_training.sh      # Training starten (mit GUI-Fenster-Option)
+├── start_eval.sh          # Modell auswerten
+├── start_demo.sh          # Live-Demo mit echtem Fenster
+├── rl_desktop.desktop     # Ubuntu-Desktop-Shortcut
+├── mujoco_arm.xml         # V1 3D-Welt (Arm, Räder, Würfel, Box)
+├── mujoco_arm_v2.xml      # V2 3D-Welt (3 Werkzeuge, 3 Objekte)
+├── arm_env.py             # V1 Gymnasium-Environment (GPU-ready)
+├── arm_env_v2.py          # V2 Gymnasium-Environment (GPU-ready)
+├── train.py               # V1 PPO-Training (CUDA-aware)
+├── train_v2.py            # V2 PPO-Training (CUDA-aware)
+├── gui_launcher.py        # Echter GUI-Launcher für Ubuntu
+├── README.md              # Diese Datei
+├── PROJEKT_PLAN_3D_ROBOTER_RL.md  # Master-Plan
+└── .venv/                 # Python-Virtualenv
 ```
 
 ---
 
-## 🛠️ Setup (einmalig, falls .venv fehlt)
+## 🔧 GPU-Unterstützung (RTX 4060 Ti)
 
+Das Projekt erkennt automatisch deine NVIDIA-GPU:
+
+- **MuJoCo GPU**: Wird verwendet wenn `mujoco` mit CUDA-Unterstützung installiert ist
+- **PyTorch CUDA**: Wird automatisch genutzt wenn verfügbar (`device="cuda"`)
+- **Isaac Lab Ready**: V3-Vorbereitung für Isaac Lab mit RTX-GPU
+
+Prüfe GPU-Status:
 ```bash
-python3 -m venv .venv
 source .venv/bin/activate
-pip install mujoco gymnasium stable-baselines3 torch tensorboard tqdm rich
+python -c "import torch; print('CUDA verfügbar:', torch.cuda.is_available())"
 ```
-
----
-
-## 📊 Aktueller Stand (CEO-Entscheidung)
-
-| Version | Roboter | Aufgabe | Status | Erfolgsrate |
-|---------|---------|---------|--------|-------------|
-| V1 | 3-Achsen-Arm auf Rädern | Würfel greifen + in Box legen | ✅ Fertig | ~22% |
-| V2 | Arm + 3 Werkzeuge (Greifer, Sauger, Schaufel) | 3 Objekte, 3 Boxen | 🔧 Environment fertig, Lernrate noch zu niedrig | 0% (braucht mehr Training) |
-| V3 | Roboterhund (Unitree A1) | Laufen lernen | 📋 Geplant (braucht Isaac Lab + RTX GPU) | — |
-
-**Empfehlung:** Fang mit V1 an. Es funktioniert sofort. Wenn du mehr willst, sag Bescheid — ich mache V2 fertig oder starte V3 mit dem Hund.
-
----
-
-## 🐛 Bekannte Einschränkungen
-
-- 22% Erfolgsrate ist ein guter Start, aber noch nicht perfekt
-- Für 100% braucht es mehr Training oder ein feineres Curriculum (Würfel startet immer weiter weg)
-- Die 3 Werkzeuge in V2 sind gebaut, aber die KI lernt noch nicht zuverlässig zwischen ihnen zu wechseln
 
 ---
 

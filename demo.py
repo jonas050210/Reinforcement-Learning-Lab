@@ -1,11 +1,12 @@
 """Live-Demo: Trainiertes Modell mit MuJoCo-Visualisierung ausführen."""
 
 import time
+import argparse
 from stable_baselines3 import PPO
 from arm_env import WheelArmEnv
 
 
-def demo(model_path, n_episodes=5, delay=0.02):
+def demo(model_path, n_episodes=3, delay=0.02):
     model = PPO.load(model_path)
     env = WheelArmEnv(render_mode="human")
 
@@ -39,9 +40,8 @@ def demo(model_path, n_episodes=5, delay=0.02):
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(description="Live-Demo des trainierten Arm-Modells")
-    parser.add_argument("--model", default="./ppo_arm_logs_final/ppo_wheel_arm_best.zip",
+    parser.add_argument("--model", default="./ppo_arm_logs_final/ppo_wheel_arm_final_v2",
                         help="Pfad zum .zip Modell")
     parser.add_argument("--episodes", type=int, default=3, help="Anzahl Demo-Episoden")
     parser.add_argument("--delay", type=float, default=0.02,
