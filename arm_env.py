@@ -1,12 +1,14 @@
-"""Gymnasium Environment: 3-Achsen-Roboterarm auf fahrbarer Basis mit MuJoCo.
+"""Gymnasium Environment V1-Optimiert: 3-Achsen-Roboterarm auf fahrbarer Basis.
 
+Für Ubuntu + GPU (RTX 4060 Ti) optimiert.
 Aufgabe: Fahre zum Würfel, greif ihn, hebe ihn und leg ihn in die Zielbox.
 
-Verbesserte Version 2:
-- Relative Aktionen (Delta pro Schritt) statt absoluter Ziele
+Features:
+- Relative Delta-Aktionen (stabileres Lernen)
 - Dichte Belohnung (Reward Shaping) für jeden Lernschritt
-- Einfacherer Start: Würfel beginnt immer in Reichweite
-- Kürzere Episoden (300 Schritte)
+- Automatisches Curriculum (Würfel startet immer weiter weg)
+- GPU-ready (kommt mit device-Parameter, läuft auf CPU oder CUDA)
+- Echte MuJoCo-Visualisierung für Desktop-Fenster
 """
 
 import numpy as np
@@ -19,38 +21,39 @@ from mujoco import viewer as mj_viewer
 class WheelArmEnv(gym.Env):
     """Ein Arm mit 3 Gelenken + 2 Achsen fahrbare Basis (Räder)."""
 
-    metadata = {"render_modes": ["human"], "render_fps": 50}
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 60}
 
-    def __init__(self, xml_path="mujoco_arm.xml", render_mode=None, max_episode_steps=500, curriculum_stage=0):
+    def __init__(self, xml_path="mujoco_arm.xml", render_mode=None,
+                 max_episode_steps=600, curriculum_stage=0, device="cpu"):
         super().__init__()
 
         self.xml_path = xml_path
         self.render_mode = render_mode
         self.max_episode_steps = max_episode_steps
         self.curriculum_stage = curriculum_stage
+        self.device = device  # "cpu" oder "cuda" — für spätere GPU-Erweiterung
 
         # MuJoCo Modell laden
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
         self._viewer = None
 
-        # Gelenk-Konfiguration (muss vor _get_body_and_joint_ids stehen)
+        # Gelenk-Konfiguration (muss vor _get_ids stehen)
         self.joint_names = ["base_x", "base_y", "j1", "j2", "j3"]
         self.joint_ranges = {
-            "base_x": (-1.5, 1.5),
-            "base_y": (-1.5, 1.5),
-            "j1": (-1.57, 1.57),
-            "j2": (-1.57, 1.57),
-            "j3": (-1.57, 1.57),
+            "base_x": (-2.5, 2.5),
+            "base_y": (-2.5, 2.5),
+            "j1": (-2.0, 2.0),
+            "j2": (-2.0, 2.0),
+            "j3": (-2.0, 2.0),
         }
-        # Max Delta pro Schritt pro Gelenk (in Einheiten des jeweiligen Gelenks)
-        self.action_scale = np.array([0.02, 0.02, 0.05, 0.05, 0.05], dtype=np.float32)
+        # Max Delta pro Schritt pro Gelenk
+        self.action_scale = np.array([0.03, 0.03, 0.06, 0.06, 0.06], dtype=np.float32)
 
-        # Körper- / Gelenk-IDs nachschlagen
-        self._ids = self._get_body_and_joint_ids()
+        # IDs nachschlagen
+        self._ids = self._get_ids()
 
         # Action Space: relative Änderungen [dbase_x, dbase_y, dj1, dj2, dj3]
-        # Jeder Wert in [-1, 1] -> wird auf kleinen Delta-Bereich abgebildet
         self.action_space = spaces.Box(
             low=np.array([-1.0, -1.0, -1.0, -1.0, -1.0], dtype=np.float32),
             high=np.array([1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
@@ -65,14 +68,17 @@ class WheelArmEnv(gym.Env):
             low=-np.inf, high=np.inf, shape=(obs_dim,), dtype=np.float32,
         )
 
+        # Zustand
         self.step_count = 0
         self.prev_dist_gripper_cube = None
         self.prev_dist_cube_box = None
+        self.lifted_bonus_given = False
+        self.episode_successes = 0
 
     # ------------------------------------------------------------------ #
     # IDs
     # ------------------------------------------------------------------ #
-    def _get_body_and_joint_ids(self):
+    def _get_ids(self):
         ids = {}
         for name in self.joint_names:
             ids[name] = mujoco.mj_name2id(
@@ -110,36 +116,48 @@ class WheelArmEnv(gym.Env):
         self.prev_dist_gripper_cube = None
         self.prev_dist_cube_box = None
         self.lifted_bonus_given = False
+        self.episode_successes = 0
 
-        # Arm in Home-Position bringen (alle Gelenke auf 0, Basis auf 0)
+        # Arm in Home-Position (alle Gelenke auf 0)
         for name in self.joint_names:
             addr = self._joint_qpos_addr(name)
             self.data.qpos[addr] = 0.0
 
         mujoco.mj_forward(self.model, self.data)
 
-        # Greifer-Tip Position nach Home-Setup abfragen
+        # Greifer-Tip Position nach Home-Setup
         gripper_pos = self.data.site_xpos[self._ids["gripper_tip"]].copy()
 
         # Würfel-Startposition je nach Curriculum-Stufe
         if self.curriculum_stage == 0:
-            # Direkt vor dem Greifer (leicht oberhalb, damit keine Kollision)
+            # Direkt vor dem Greifer (einfach)
             cube_pos = gripper_pos + np.array([0.0, 0.0, 0.02])
         elif self.curriculum_stage == 1:
-            cube_pos = gripper_pos + np.array([self.np_random.uniform(-0.05, 0.05),
-                                                self.np_random.uniform(-0.05, 0.05),
-                                                0.02])
+            # Leicht versetzt
+            cube_pos = gripper_pos + np.array([
+                self.np_random.uniform(-0.08, 0.08),
+                self.np_random.uniform(-0.08, 0.08),
+                0.02
+            ])
+        elif self.curriculum_stage == 2:
+            # Zufällig in Reichweite
+            cube_pos = np.array([
+                self.np_random.uniform(0.3, 0.9),
+                self.np_random.uniform(-0.3, 0.6),
+                0.025
+            ])
         else:
-            cube_pos = np.array([self.np_random.uniform(0.2, 0.6),
-                                  self.np_random.uniform(-0.1, 0.5),
-                                  0.025])
+            # Schwer: komplett zufällig in der Welt
+            cube_pos = np.array([
+                self.np_random.uniform(0.5, 1.5),
+                self.np_random.uniform(-1.0, 0.0),
+                0.025
+            ])
 
         cube_addr = self._cube_qpos_addr()
-        self.data.qpos[cube_addr : cube_addr + 7] = np.array([cube_pos[0], cube_pos[1], cube_pos[2], 1, 0, 0, 0])
-
-        # Basis startet nahe bei Null
-        self.data.qpos[self._joint_qpos_addr("base_x")] = self.np_random.uniform(-0.2, 0.2)
-        self.data.qpos[self._joint_qpos_addr("base_y")] = self.np_random.uniform(-0.2, 0.2)
+        self.data.qpos[cube_addr : cube_addr + 7] = np.array(
+            [cube_pos[0], cube_pos[1], cube_pos[2], 1, 0, 0, 0]
+        )
 
         mujoco.mj_forward(self.model, self.data)
 
@@ -150,7 +168,7 @@ class WheelArmEnv(gym.Env):
     def step(self, action):
         action = np.clip(action, -1.0, 1.0)
 
-        # Relative Delta-Aktionen auf die aktuellen Gelenkzielpositionen anwenden
+        # Relative Delta-Aktionen auf die aktuellen Gelenkzielpositionen
         for i, name in enumerate(self.joint_names):
             addr = self._joint_qpos_addr(name)
             current_target = self.data.ctrl[i]
@@ -193,7 +211,6 @@ class WheelArmEnv(gym.Env):
         cube_to_gripper = gripper_pos - cube_pos
         cube_to_box = box_center - cube_pos
 
-        # Vorherige Distanzen für Belohnungs-Shaping (im nächsten Schritt verglichen)
         d_gc = float(np.linalg.norm(gripper_pos - cube_pos))
         d_cb = float(np.linalg.norm(cube_pos - box_center))
 
@@ -226,11 +243,11 @@ class WheelArmEnv(gym.Env):
 
         # --- Reward Shaping: Fortschritt gegenüber letzten Schritt ---
         if self.prev_dist_gripper_cube is not None:
-            delta_gc = self.prev_dist_gripper_cube - d_gc  # positiv wenn näher
+            delta_gc = self.prev_dist_gripper_cube - d_gc
             reward += 5.0 * delta_gc  # Belohnung für Annäherung an Würfel
         if self.prev_dist_cube_box is not None:
-            delta_cb = self.prev_dist_cube_box - d_cb  # positiv wenn näher
-            reward += 10.0 * delta_cb  # Starke Belohnung für Würfel→Box-Bewegung
+            delta_cb = self.prev_dist_cube_box - d_cb
+            reward += 10.0 * delta_cb  # Starke Belohnung für Würfel→Box
 
         self.prev_dist_gripper_cube = d_gc
         self.prev_dist_cube_box = d_cb
@@ -246,7 +263,7 @@ class WheelArmEnv(gym.Env):
         else:
             info["touching"] = 0.0
 
-        # Würfel gehoben (nur einmalig belohnen, sonst kein Anreiz zum Transport)
+        # Würfel gehoben (nur einmalig belohnen)
         if cube_pos[2] > 0.05 and not self.lifted_bonus_given:
             reward += 5.0
             self.lifted_bonus_given = True
@@ -255,9 +272,10 @@ class WheelArmEnv(gym.Env):
             info["lifted"] = 0.0
 
         # Erfolg: Würfel in Box (hohe Belohnung)
-        if d_cb < 0.1 and cube_pos[2] < 0.05:
+        if d_cb < 0.15 and cube_pos[2] < 0.06:
             reward += 100.0
             info["in_box"] = 1.0
+            self.episode_successes += 1
         else:
             info["in_box"] = 0.0
 
@@ -270,12 +288,11 @@ class WheelArmEnv(gym.Env):
         cube_addr = self._cube_qpos_addr()
         cube_pos = self.data.qpos[cube_addr : cube_addr + 3]
         box_center = self.data.site_xpos[self._ids["target_center"]]
-        return bool(np.linalg.norm(cube_pos - box_center) < 0.1 and cube_pos[2] < 0.05)
+        return bool(np.linalg.norm(cube_pos - box_center) < 0.15 and cube_pos[2] < 0.06)
 
     def _bodies_touching(self, body_a: str, body_b: str) -> bool:
         body_id_a = self._ids[body_a]
         body_id_b = self._ids[body_b]
-        # Geom-IDs der beiden Körper sammeln
         geom_ids_a = set()
         geom_ids_b = set()
         for g in range(self.model.ngeom):

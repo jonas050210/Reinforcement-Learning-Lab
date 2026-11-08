@@ -1,45 +1,29 @@
 #!/bin/bash
 # =============================================================================
-# Reinforcement-Learning-Lab — Training starten
-# =============================================================================
-# Führe dieses Skript auf deinem PC aus, um das V1-Modell zu trainieren.
-# 
-# Voraussetzung: Virtualenv existiert (.venv)
-# Dauer: ca. 5-6 Minuten auf i7-12700F (CPU)
+# Reinforcement-Learning-Lab — Training starten (Ubuntu)
 # =============================================================================
 
 cd "$(dirname "$0")"
 
-echo "=============================================="
-echo "  Reinforcement-Learning-Lab — Training V1"
-echo "=============================================="
-echo ""
-
-# Virtualenv aktivieren
 if [ ! -d ".venv" ]; then
-    echo "[FEHLER] .venv nicht gefunden. Bitte zuerst einrichten:"
-    echo "  python3 -m venv .venv"
-    echo "  source .venv/bin/activate"
-    echo "  pip install mujoco gymnasium stable-baselines3 torch tensorboard tqdm rich"
+    echo "[FEHLER] .venv nicht gefunden. Bitte zuerst installieren:"
+    echo "  ./install_ubuntu.sh"
     exit 1
 fi
 
 source .venv/bin/activate
 
-echo ">>> Starte PPO-Training (500.000 Timesteps, 4 parallele Umgebungen)"
-echo ">>> Das kann 5-10 Minuten dauern..."
-echo ""
-
-python train.py
-
-echo ""
 echo "=============================================="
-echo "  Training abgeschlossen!"
+echo "  RL Training — Roboterarm (V1)"
 echo "=============================================="
 echo ""
-echo "Modell gespeichert in: ./ppo_arm_logs_final/ppo_wheel_arm_final_v2"
+
+# GPU prüfen
+python -c "import torch; print('CUDA:', torch.cuda.is_available())" 2>/dev/null || echo "CPU-Modus"
+
 echo ""
-echo "Jetzt testen:"
-echo "  ./start_eval.sh"
-echo "  ./start_demo.sh"
+echo "Starte Training (500.000 Timesteps)..."
+echo "Drücke Strg+C zum Abbrechen."
 echo ""
+
+python train.py --timesteps 500000 --device auto --curriculum 0

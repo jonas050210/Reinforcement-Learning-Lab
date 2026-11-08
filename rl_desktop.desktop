@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=RL Training
+GenericName=Reinforcement-Learning Training
+Comment=Starte PPO-Training für den 3D-Roboterarm
+Exec=bash -c 'cd "%k/.." && source .venv/bin/activate && python train.py --timesteps 500000'
+Icon=applications-science
+Terminal=true
+Categories=Education;Science;ArtificialIntelligence;
+Keywords=rl;robot;mujoco;ppo;reinforcement;
+StartupNotify=true

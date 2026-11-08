@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Reinforcement-Learning-Lab — Modell evaluieren
+# Reinforcement-Learning-Lab — Modell auswerten (Ubuntu)
 # =============================================================================
 
 cd "$(dirname "$0")"
@@ -13,7 +13,7 @@ fi
 source .venv/bin/activate
 
 echo "=============================================="
-echo "  Reinforcement-Learning-Lab — Evaluation V1"
+echo "  RL Evaluation — 50 Test-Episoden"
 echo "=============================================="
 echo ""
 

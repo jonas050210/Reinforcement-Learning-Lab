@@ -1,4 +1,4 @@
-"""Evaluierung des trainierten PPO-Modells für den Wheel-Arm."""
+"""Evaluierung des trainierten PPO-Modells für den Wheel-Arm V1."""
 
 import argparse
 from stable_baselines3 import PPO
@@ -42,19 +42,22 @@ def evaluate(model_path, n_episodes=50, render=False):
 
     env.close()
 
-    print(f"\n=== Evaluation: {model_path} ===")
-    print(f"Episoden:            {n_episodes}")
-    print(f"Erfolgsrate (Box):   {successes}/{n_episodes} ({successes/n_episodes*100:.0f}%)")
-    print(f"Würfel gehoben:      {lifts}/{n_episodes} ({lifts/n_episodes*100:.0f}%)")
-    print(f"Würfel berührt:      {touches}/{n_episodes} ({touches/n_episodes*100:.0f}%)")
-    print(f"Ø Belohnung:         {np.mean(rewards):.1f}")
-    print(f"Beste Belohnung:     {np.max(rewards):.1f}")
-    print(f"Ø Episode-Länge:     {np.mean(ep_lengths):.0f} / {env.max_episode_steps}")
+    print(f"\n==============================================")
+    print(f"  Evaluation: {model_path}")
+    print(f"==============================================")
+    print(f"  Episoden:           {n_episodes}")
+    print(f"  Erfolgsrate (Box):  {successes}/{n_episodes} ({successes/n_episodes*100:.0f}%)")
+    print(f"  Würfel gehoben:     {lifts}/{n_episodes} ({lifts/n_episodes*100:.0f}%)")
+    print(f"  Würfel berührt:     {touches}/{n_episodes} ({touches/n_episodes*100:.0f}%)")
+    print(f"  Ø Belohnung:        {np.mean(rewards):.1f}")
+    print(f"  Beste Belohnung:    {np.max(rewards):.1f}")
+    print(f"  Ø Episode-Länge:    {np.mean(ep_lengths):.0f} / {env.max_episode_steps}")
+    print(f"==============================================\n")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluiert das trainierte Arm-Modell")
-    parser.add_argument("--model", default="./ppo_arm_logs_final/ppo_wheel_arm_best.zip",
+    parser.add_argument("--model", default="./ppo_arm_logs_final/ppo_wheel_arm_final_v2",
                         help="Pfad zum .zip Modell")
     parser.add_argument("--episodes", type=int, default=50, help="Anzahl Test-Episoden")
     parser.add_argument("--render", action="store_true", help="Live-Fenster anzeigen")
