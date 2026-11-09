@@ -111,6 +111,46 @@ def check_python() -> bool:
         return False
 
 
+def install_python_tk() -> None:
+    """Installiert python3-tk auf Ubuntu/Debian (für tkinter GUI)."""
+    if platform.system() != "linux":
+        return
+
+    # Prüfen ob tkinter bereits verfügbar ist
+    try:
+        import tkinter  # noqa: F401
+        print_ok("tkinter bereits verfügbar")
+        return
+    except ImportError:
+        pass
+
+    print_step("Installiere python3-tk (für GUI-Tkinter)...")
+    try:
+        # apt aktualisieren und python3-tk installieren
+        result = subprocess.run(
+            ["apt-get", "update", "-qq"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            print_warn("apt-get update fehlgeschlagen — versuche trotzdem Installation")
+        result = subprocess.run(
+            ["apt-get", "install", "-y", "-qq", "python3-tk"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode == 0:
+            print_ok("python3-tk installiert")
+        else:
+            print_warn(f"python3-tk konnte nicht automatisch installiert werden")
+            print(f"  {YELLOW}Bitte manuell installieren: sudo apt install python3-tk{RESET}")
+    except Exception as e:
+        print_warn(f"Fehler bei python3-tk Installation: {e}")
+        print(f"  {YELLOW}Bitte manuell installieren: sudo apt install python3-tk{RESET}")
+
+
 def get_paths(system: str):
     """Gibt Pfade für venv-Python und pip zurück (plattform-universell)."""
     if system == "windows":
@@ -353,7 +393,11 @@ def main():
         input("\nDrücke Enter zum Beenden ...")
         sys.exit(1)
 
-    # 3. Pfade bestimmen
+    # 3. python3-tk installieren (Ubuntu) für tkinter GUI
+    install_python_tk()
+    print()
+
+    # 3b. Pfade bestimmen
     venv_python, venv_pip = get_paths(system)
 
     # 4. Prüfen ob Installation bereits vollständig ist

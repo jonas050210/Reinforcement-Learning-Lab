@@ -6,3 +6,7 @@ torch
 tensorboard
 tqdm
 rich
+
+# Hinweis: python3-tk ist ein System-Paket (kein pip-Paket)
+# Unter Ubuntu/Debian installieren: sudo apt install python3-tk
+# setup.py erledigt dies automatisch.
