@@ -1,0 +1,8 @@
+numpy
+mujoco
+gymnasium
+stable-baselines3
+torch
+tensorboard
+tqdm
+rich
