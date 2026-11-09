@@ -1,0 +1,127 @@
+<mujoco model="unitree_a1_quadruped">
+  <compiler angle="radian" coordinate="local"/>
+  <default>
+    <joint damping="0.5" armature="0.01"/>
+    <geom contype="1" conaffinity="1" condim="3" friction="0.8 0.1 0.1"/>
+  </default>
+
+  <option timestep="0.005" gravity="0 0 -9.81" iterations="50" solver="CG"/>
+
+  <worldbody>
+    <!-- Boden -->
+    <geom name="floor" type="plane" size="0 0 1" rgba="0.82 0.82 0.82 1"/>
+
+    <!-- === ROBOTERHUND (Unitree A1 ähnlich, 12 DOF) === -->
+    <body name="trunk" pos="0 0 0.32">
+      <!-- Rumpf -->
+      <geom name="trunk_geom" type="box" size="0.28 0.14 0.08" rgba="0.2 0.5 0.8 1"/>
+      <site name="trunk_center" pos="0 0 0" size="0.006" rgba="1 0 0 1"/>
+
+      <!-- === BEIN VORNE-LINKS === -->
+      <body name="leg_fl" pos="0.22 0.1 0.0">
+        <joint name="hip_fl" type="hinge" axis="0 1 0" limited="true" range="-0.8 0.8"/>
+        <geom name="hip_fl_geom" type="capsule" size="0.025 0.06" pos="0 0 -0.03" euler="0 0 1.57" rgba="0.85 0.3 0.3 1"/>
+
+        <body name="thigh_fl" pos="0 0 -0.06">
+          <joint name="thigh_fl" type="hinge" axis="0 1 0" limited="true" range="-1.5 0.5"/>
+          <geom name="thigh_fl_geom" type="capsule" size="0.02 0.12" pos="0 0 -0.06" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
+
+          <body name="calf_fl" pos="0 0 -0.12">
+            <joint name="calf_fl" type="hinge" axis="0 1 0" limited="true" range="-0.5 2.5"/>
+            <geom name="calf_fl_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
+
+            <body name="foot_fl" pos="0 0 -0.1">
+              <geom name="foot_fl_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_fl_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- === BEIN VORNE-RECHTS === -->
+      <body name="leg_fr" pos="0.22 -0.1 0.0">
+        <joint name="hip_fr" type="hinge" axis="0 1 0" limited="true" range="-0.8 0.8"/>
+        <geom name="hip_fr_geom" type="capsule" size="0.025 0.06" pos="0 0 -0.03" euler="0 0 1.57" rgba="0.85 0.3 0.3 1"/>
+
+        <body name="thigh_fr" pos="0 0 -0.06">
+          <joint name="thigh_fr" type="hinge" axis="0 1 0" limited="true" range="-1.5 0.5"/>
+          <geom name="thigh_fr_geom" type="capsule" size="0.02 0.12" pos="0 0 -0.06" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
+
+          <body name="calf_fr" pos="0 0 -0.12">
+            <joint name="calf_fr" type="hinge" axis="0 1 0" limited="true" range="-0.5 2.5"/>
+            <geom name="calf_fr_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
+
+            <body name="foot_fr" pos="0 0 -0.1">
+              <geom name="foot_fr_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_fr_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- === BEIN HINTEN-LINKS === -->
+      <body name="leg_hl" pos="-0.22 0.1 0.0">
+        <joint name="hip_hl" type="hinge" axis="0 1 0" limited="true" range="-0.8 0.8"/>
+        <geom name="hip_hl_geom" type="capsule" size="0.025 0.06" pos="0 0 -0.03" euler="0 0 1.57" rgba="0.85 0.3 0.3 1"/>
+
+        <body name="thigh_hl" pos="0 0 -0.06">
+          <joint name="thigh_hl" type="hinge" axis="0 1 0" limited="true" range="-1.5 0.5"/>
+          <geom name="thigh_hl_geom" type="capsule" size="0.02 0.12" pos="0 0 -0.06" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
+
+          <body name="calf_hl" pos="0 0 -0.12">
+            <joint name="calf_hl" type="hinge" axis="0 1 0" limited="true" range="-0.5 2.5"/>
+            <geom name="calf_hl_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
+
+            <body name="foot_hl" pos="0 0 -0.1">
+              <geom name="foot_hl_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_hl_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- === BEIN HINTEN-RECHTS === -->
+      <body name="leg_hr" pos="-0.22 -0.1 0.0">
+        <joint name="hip_hr" type="hinge" axis="0 1 0" limited="true" range="-0.8 0.8"/>
+        <geom name="hip_hr_geom" type="capsule" size="0.025 0.06" pos="0 0 -0.03" euler="0 0 1.57" rgba="0.85 0.3 0.3 1"/>
+
+        <body name="thigh_hr" pos="0 0 -0.06">
+          <joint name="thigh_hr" type="hinge" axis="0 1 0" limited="true" range="-1.5 0.5"/>
+          <geom name="thigh_hr_geom" type="capsule" size="0.02 0.12" pos="0 0 -0.06" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
+
+          <body name="calf_hr" pos="0 0 -0.12">
+            <joint name="calf_hr" type="hinge" axis="0 1 0" limited="true" range="-0.5 2.5"/>
+            <geom name="calf_hr_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
+
+            <body name="foot_hr" pos="0 0 -0.1">
+              <geom name="foot_hr_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_hr_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- Rumpf -->
+    <!-- (keine direkten Antriebe am Rumpf, er wird durch Beine stabilisiert) -->
+
+    <!-- Beine: 3 Gelenke pro Bein = 12 Antriebe -->
+    <motor name="motor_hip_fl" joint="hip_fl" gear="60"/>
+    <motor name="motor_thigh_fl" joint="thigh_fl" gear="90"/>
+    <motor name="motor_calf_fl" joint="calf_fl" gear="90"/>
+
+    <motor name="motor_hip_fr" joint="hip_fr" gear="60"/>
+    <motor name="motor_thigh_fr" joint="thigh_fr" gear="90"/>
+    <motor name="motor_calf_fr" joint="calf_fr" gear="90"/>
+
+    <motor name="motor_hip_hl" joint="hip_hl" gear="60"/>
+    <motor name="motor_thigh_hl" joint="thigh_hl" gear="90"/>
+    <motor name="motor_calf_hl" joint="calf_hl" gear="90"/>
+
+    <motor name="motor_hip_hr" joint="hip_hr" gear="60"/>
+    <motor name="motor_thigh_hr" joint="thigh_hr" gear="90"/>
+    <motor name="motor_calf_hr" joint="calf_hr" gear="90"/>
+  </actuator>
+</mujoco>

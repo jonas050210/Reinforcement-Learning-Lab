@@ -1,107 +1,119 @@
-<mujoco model="wheel_arm_3tools_rl">
+<mujoco model="wheel_arm_3tools_v2">
   <compiler angle="radian" coordinate="local"/>
   <default>
-    <joint damping="1" armature="0.01"/>
-    <geom contype="1" conaffinity="1" condim="3" friction="0.5 0.1 0.1"/>
+    <joint damping="0.5" armature="0.01"/>
+    <geom contype="1" conaffinity="1" condim="3" friction="0.6 0.1 0.1"/>
   </default>
 
-  <option timestep="0.01" gravity="0 0 -9.81" iterations="50"/>
+  <option timestep="0.005" gravity="0 0 -9.81" iterations="50" solver="CG"/>
 
   <worldbody>
     <!-- Boden -->
-    <geom name="floor" type="plane" size="0 0 1" rgba="0.85 0.85 0.85 1"/>
+    <geom name="floor" type="plane" size="0 0 1" rgba="0.82 0.82 0.82 1"/>
+
+    <!-- === WERKZEUG-PLATTFORM (Zum Werkzeugwechsel) === -->
+    <body name="tool_rack" pos="1.8 0 0.05">
+      <geom name="rack_base" type="box" size="0.15 0.1 0.03" rgba="0.4 0.4 0.4 1"/>
+      <!-- Greifer-Platz -->
+      <geom name="rack_gripper" type="cylinder" size="0.02 0.02" pos="-0.05 0 0.05" rgba="0.3 0.8 0.3 1"/>
+      <!-- Sauger-Platz -->
+      <geom name="rack_suction" type="cylinder" size="0.02 0.02" pos="0 0 0.05" rgba="0.9 0.4 0.4 1"/>
+      <!-- Schaufel-Platz -->
+      <geom name="rack_scoop" type="cylinder" size="0.02 0.02" pos="0.05 0 0.05" rgba="0.7 0.7 0.3 1"/>
+    </body>
 
     <!-- Roboter Basis (fahrbar auf X/Y = Räder) -->
-    <body name="base" pos="0 0 0.1">
-      <joint name="base_x" type="slide" axis="1 0 0" limited="true" range="-2 2"/>
-      <joint name="base_y" type="slide" axis="0 1 0" limited="true" range="-2 2"/>
-      <geom name="base_geom" type="box" size="0.25 0.15 0.06" rgba="0.2 0.5 0.8 1"/>
+    <body name="base" pos="0 0 0.12">
+      <joint name="base_x" type="slide" axis="1 0 0" limited="true" range="-3 3"/>
+      <joint name="base_y" type="slide" axis="0 1 0" limited="true" range="-3 3"/>
+      <geom name="base_geom" type="box" size="0.28 0.16 0.07" rgba="0.2 0.5 0.8 1"/>
 
       <!-- Arm Gelenk 1: Basis-Rotation um Z -->
-      <body name="arm1" pos="0 0 0.12">
-        <joint name="j1" type="hinge" axis="0 0 1" limited="true" range="-1.57 1.57"/>
-        <geom name="arm1_geom" type="capsule" size="0.03 0.1" pos="0 0 0.05" euler="0 1.57 0" rgba="0.85 0.3 0.3 1"/>
+      <body name="arm1" pos="0 0 0.14">
+        <joint name="j1" type="hinge" axis="0 0 1" limited="true" range="-2.0 2.0"/>
+        <geom name="arm1_geom" type="capsule" size="0.035 0.12" pos="0 0 0.06" euler="0 1.57 0" rgba="0.85 0.3 0.3 1"/>
 
         <!-- Arm Gelenk 2: Schulter -->
-        <body name="arm2" pos="0 0 0.2">
-          <joint name="j2" type="hinge" axis="0 1 0" limited="true" range="-1.57 1.57"/>
-          <geom name="arm2_geom" type="capsule" size="0.025 0.15" pos="0 0 0.075" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
+        <body name="arm2" pos="0 0 0.24">
+          <joint name="j2" type="hinge" axis="0 1 0" limited="true" range="-2.0 2.0"/>
+          <geom name="arm2_geom" type="capsule" size="0.03 0.18" pos="0 0 0.09" euler="0 0 1.57" rgba="0.85 0.5 0.2 1"/>
 
           <!-- Arm Gelenk 3: Ellenbogen -->
-          <body name="arm3" pos="0 0 0.15">
-            <joint name="j3" type="hinge" axis="0 1 0" limited="true" range="-1.57 1.57"/>
-            <geom name="arm3_geom" type="capsule" size="0.02 0.1" pos="0 0 0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
+          <body name="arm3" pos="0 0 0.18">
+            <joint name="j3" type="hinge" axis="0 1 0" limited="true" range="-2.0 2.0"/>
+            <geom name="arm3_geom" type="capsule" size="0.025 0.12" pos="0 0 0.06" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
 
-            <!-- === WERKZEUG 1: Parallel-Greifer (Standard) === -->
-            <body name="gripper_tool" pos="0 0 0.1">
-              <joint name="tool_joint" type="slide" axis="0 0 1" limited="true" range="-0.03 0.03"/>
+            <!-- === WERKZEUG 1: Parallel-Greifer (für Würfel) === -->
+            <body name="gripper_tool" pos="0 0 0.12">
+              <joint name="gripper_slide" type="slide" axis="0 0 1" limited="true" range="-0.04 0.04"/>
               <geom name="gripper_left" type="box" size="0.01 0.008 0.02" pos="-0.012 0 0" rgba="0.3 0.8 0.3 1"/>
               <geom name="gripper_right" type="box" size="0.01 0.008 0.02" pos="0.012 0 0" rgba="0.3 0.8 0.3 1"/>
-              <site name="gripper_tip" pos="0 0 -0.02" size="0.008" rgba="1 0 0 1"/>
+              <site name="gripper_tip" pos="0 0 -0.025" size="0.006" rgba="1 0 0 1"/>
             </body>
 
-            <!-- === WERKZEUG 2: Sauger/Magnet (für glatte Objekte) === -->
-            <body name="suction_tool" pos="0 0 0.15">
-              <geom name="suction_cup" type="cylinder" size="0.015 0.01" rgba="0.9 0.4 0.4 1"/>
-              <site name="suction_tip" pos="0 0 -0.01" size="0.008" rgba="1 0.5 0 1"/>
+            <!-- === WERKZEUG 2: Sauger/Magnet (für glatte Kugeln) === -->
+            <body name="suction_tool" pos="0 0 0.17">
+              <geom name="suction_cup" type="cylinder" size="0.018 0.012" rgba="0.9 0.4 0.4 1"/>
+              <site name="suction_tip" pos="0 0 -0.012" size="0.006" rgba="1 0.5 0 1"/>
             </body>
 
             <!-- === WERKZEUG 3: Schaufel (für kleine Teile) === -->
-            <body name="scoop_tool" pos="0.02 0 0.1">
-              <geom name="scoop_bowl" type="box" size="0.025 0.03 0.01" pos="0 0 0.005" euler="0 0.5 0" rgba="0.7 0.7 0.3 1"/>
-              <site name="scoop_tip" pos="0 0.03 0" size="0.008" rgba="0.7 0.3 0.7 1"/>
+            <body name="scoop_tool" pos="0.02 0 0.12">
+              <geom name="scoop_bowl" type="box" size="0.03 0.035 0.012" pos="0 0 0.006" euler="0 0.5 0" rgba="0.7 0.7 0.3 1"/>
+              <site name="scoop_tip" pos="0 0.035 0" size="0.006" rgba="0.7 0.3 0.7 1"/>
             </body>
           </body>
         </body>
       </body>
     </body>
 
-    <!-- === MEHRERE OBJEKTE (3 Stück, zufällig platziert) === -->
-    <!-- Würfel 1 (Standard, mit Greifer aufhebbar) -->
-    <body name="cube1" pos="0.5 0.2 0.025">
+    <!-- === OBJEKT 1: Würfel (orange, braucht Greifer) === -->
+    <body name="cube1" pos="0.8 0.3 0.03">
       <joint name="cube1_joint" type="free"/>
-      <geom name="cube1_geom" type="box" size="0.025 0.025 0.025" rgba="1 0.5 0 1" mass="0.1"/>
+      <geom name="cube1_geom" type="box" size="0.03 0.03 0.03" rgba="1 0.5 0 1" mass="0.15"/>
     </body>
 
-    <!-- Würfel 2 (glatt, braucht Sauger) -->
-    <body name="cube2" pos="0.5 -0.2 0.025">
-      <joint name="cube2_joint" type="free"/>
-      <geom name="cube2_geom" type="box" size="0.025 0.025 0.025" rgba="0.2 0.6 1 1" mass="0.1"/>
+    <!-- === OBJEKT 2: Kugel (blau, glatt, braucht Sauger) === -->
+    <body name="sphere1" pos="0.8 -0.3 0.03">
+      <joint name="sphere1_joint" type="free"/>
+      <geom name="sphere1_geom" type="sphere" size="0.03" rgba="0.2 0.6 1 1" mass="0.12"/>
     </body>
 
-    <!-- Kleiner Teil (braucht Schaufel) -->
-    <body name="smallpart1" pos="0.3 0.4 0.01">
-      <joint name="smallpart1_joint" type="free"/>
-      <geom name="smallpart1_geom" type="sphere" size="0.015" rgba="0.6 0.2 0.8 1" mass="0.05"/>
+    <!-- === OBJEKT 3: Kleiner Teil (lila, braucht Schaufel) === -->
+    <body name="small1" pos="1.0 0.6 0.015">
+      <joint name="small1_joint" type="free"/>
+      <geom name="small1_geom" type="sphere" size="0.018" rgba="0.7 0.2 0.8 1" mass="0.05"/>
     </body>
 
-    <!-- === ZIELBOXEN (3 Stück, farblich passend zu den Objekten) === -->
-    <geom name="box_orange" type="box" size="0.1 0.1 0.01" pos="0.8 0.2 0.005" rgba="1 0.5 0 0.3"/>
-    <site name="box_orange_center" pos="0.8 0.2 0.015" size="0.005" rgba="1 0.5 0 1"/>
+    <!-- === ZIELBOXEN (farblich passend) === -->
+    <geom name="box_cube" type="box" size="0.14 0.14 0.015" pos="1.0 0.3 0.007" rgba="1 0.5 0 0.3"/>
+    <site name="box_cube_center" pos="1.0 0.3 0.022" size="0.006" rgba="1 0.5 0 1"/>
 
-    <geom name="box_blue" type="box" size="0.1 0.1 0.01" pos="0.8 -0.2 0.005" rgba="0.2 0.6 1 0.3"/>
-    <site name="box_blue_center" pos="0.8 -0.2 0.015" size="0.005" rgba="0.2 0.6 1 1"/>
+    <geom name="box_sphere" type="box" size="0.14 0.14 0.015" pos="1.0 -0.3 0.007" rgba="0.2 0.6 1 0.3"/>
+    <site name="box_sphere_center" pos="1.0 -0.3 0.022" size="0.006" rgba="0.2 0.6 1 1"/>
 
-    <geom name="box_purple" type="box" size="0.1 0.1 0.01" pos="0.5 0.6 0.005" rgba="0.6 0.2 0.8 0.3"/>
-    <site name="box_purple_center" pos="0.5 0.6 0.015" size="0.005" rgba="0.6 0.2 0.8 1"/>
+    <geom name="box_small" type="box" size="0.1 0.1 0.01" pos="1.2 0.6 0.005" rgba="0.7 0.2 0.8 0.3"/>
+    <site name="box_small_center" pos="1.2 0.6 0.015" size="0.006" rgba="0.7 0.2 0.8 1"/>
 
-    <!-- Hindernis (muss umfahren werden) -->
-    <geom name="obstacle1" type="cylinder" size="0.04 0.1" pos="0.4 0.0 0.05" rgba="0.4 0.4 0.4 0.8"/>
+    <!-- === HINDERNISSE (muss der Arm umfahren) === -->
+    <geom name="obstacle1" type="cylinder" size="0.05 0.15" pos="0.4 0 0.075" rgba="0.4 0.4 0.4 0.8"/>
+    <geom name="obstacle2" type="box" size="0.08 0.04 0.1" pos="0.4 0.8 0.05" rgba="0.4 0.4 0.4 0.8"/>
+    <geom name="obstacle3" type="cylinder" size="0.04 0.12" pos="-0.8 0.4 0.06" rgba="0.4 0.4 0.4 0.8"/>
   </worldbody>
 
   <actuator>
     <!-- Basis -->
-    <motor name="motor_base_x" joint="base_x" gear="15"/>
-    <motor name="motor_base_y" joint="base_y" gear="15"/>
+    <motor name="motor_base_x" joint="base_x" gear="25"/>
+    <motor name="motor_base_y" joint="base_y" gear="25"/>
 
     <!-- Arm Gelenke -->
-    <motor name="motor_j1" joint="j1" gear="60"/>
-    <motor name="motor_j2" joint="j2" gear="60"/>
-    <motor name="motor_j3" joint="j3" gear="60"/>
+    <motor name="motor_j1" joint="j1" gear="90"/>
+    <motor name="motor_j2" joint="j2" gear="90"/>
+    <motor name="motor_j3" joint="j3" gear="90"/>
 
     <!-- Werkzeug 1: Greifer öffnen/schließen -->
-    <motor name="motor_gripper" joint="tool_joint" gear="200"/>
+    <motor name="motor_gripper" joint="gripper_slide" gear="300"/>
 
-    <!-- Werkzeug 2 & 3 sind statisch (keine Aktoren, nur Positionierung) -->
+    <!-- Werkzeug 2 & 3 sind statisch (Positionierung durch Arm) -->
   </actuator>
 </mujoco>

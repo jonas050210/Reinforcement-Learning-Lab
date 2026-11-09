@@ -1,6 +1,7 @@
-"""PPO-Training für den Wheel-Arm V2 mit 3 Werkzeugen und mehreren Objekten."""
+"""PPO-Training für den Wheel-Arm V2 (3 Werkzeuge, 3 Objekte, Hindernisse)."""
 
 import os
+import argparse
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback, StopTrainingOnRewardThreshold
@@ -9,27 +10,54 @@ from arm_env_v2 import WheelArm3ToolsEnv
 
 
 def main():
+    parser = argparse.ArgumentParser(description="PPO-Training für Wheel-Arm V2")
+    parser.add_argument("--timesteps", type=int, default=300_000,
+                        help="Anzahl Training-Timesteps")
+    parser.add_argument("--device", type=str, default="auto",
+                        choices=["auto", "cpu", "cuda"],
+                        help="Gerät für Training")
+    parser.add_argument("--curriculum", type=int, default=0,
+                        choices=[0, 1, 2, 3],
+                        help="Curriculum-Stufe (0=einfach, 3=schwer)")
+    parser.add_argument("--n-envs", type=int, default=4,
+                        help="Anzahl paralleler Umgebungen")
+    args = parser.parse_args()
+
+    # Gerät bestimmen
+    if args.device == "auto":
+        try:
+            import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        except ImportError:
+            device = "cpu"
+    else:
+        device = args.device
+
+    print(f"==============================================")
+    print(f"  PPO-Training V2 — WheelArm3ToolsEnv")
+    print(f"==============================================")
+    print(f"  Timesteps:    {args.timesteps:,}")
+    print(f"  Gerät:        {device.upper()}")
+    print(f"  Curriculum:   Stufe {args.curriculum}")
+    print(f"  Parallele Envs: {args.n_envs}")
+    print(f"==============================================")
+    print()
+
     log_dir = "./ppo_arm_v2_logs"
     os.makedirs(log_dir, exist_ok=True)
 
-    curriculum_stage = 0  # Start: 1 Objekt, einfach
-
-    # Vektorisierte Umgebungen
-    n_envs = 4
     train_env = make_vec_env(
         WheelArm3ToolsEnv,
-        n_envs=n_envs,
+        n_envs=args.n_envs,
         seed=42,
-        env_kwargs={"curriculum_stage": curriculum_stage},
+        env_kwargs={"curriculum_stage": args.curriculum},
         wrapper_class=lambda e: Monitor(e),
     )
 
-    # Eval-Umgebung
-    eval_env = WheelArm3ToolsEnv(render_mode=None, curriculum_stage=curriculum_stage)
+    eval_env = WheelArm3ToolsEnv(render_mode=None, curriculum_stage=args.curriculum)
     eval_env = Monitor(eval_env)
 
-    # Stop bei guter Belohnung
-    stop_callback = StopTrainingOnRewardThreshold(reward_threshold=100.0, verbose=1)
+    stop_callback = StopTrainingOnRewardThreshold(reward_threshold=80.0, verbose=1)
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=log_dir,
@@ -40,7 +68,6 @@ def main():
         callback_on_new_best=stop_callback,
     )
 
-    # PPO Agent
     model = PPO(
         "MlpPolicy",
         train_env,
@@ -52,20 +79,23 @@ def main():
         gamma=0.99,
         gae_lambda=0.95,
         clip_range=0.2,
+        ent_coef=0.01,
+        vf_coef=0.5,
+        max_grad_norm=0.5,
         tensorboard_log=log_dir,
-        device="cpu",
+        device=device,
     )
 
-    print(f"Starte PPO-Training V2 (3 Werkzeuge, {curriculum_stage + 1} Objekt, Curriculum Stage {curriculum_stage})...")
+    print(f"Starte PPO-Training V2 auf {device.upper()}...")
     model.learn(
-        total_timesteps=300_000,
+        total_timesteps=args.timesteps,
         callback=eval_callback,
         progress_bar=True,
     )
 
-    # Finales Modell speichern
     model.save(os.path.join(log_dir, "ppo_arm_v2_final"))
-    print("Training abgeschlossen. Modell gespeichert in", log_dir)
+    print(f"\n✅ Training V2 abgeschlossen!")
+    print(f"   Modell gespeichert in: {log_dir}/ppo_arm_v2_final")
 
     train_env.close()
     eval_env.close()
