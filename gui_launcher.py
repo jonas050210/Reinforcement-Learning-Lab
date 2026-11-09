@@ -7,20 +7,19 @@
 
   V1 — Einfacher Arm auf Rädern
        3-Achsen-Arm lernt Würfel greifen und in Box legen
-       → train.py, demo.py, eval.py
 
   V2 — Arm mit 3 Werkzeugen
        Greifer, Sauger, Schaufel — 3 Objekte, 3 Boxen, Hindernisse
-       → train_v2.py, demo_v2.py, eval_v2.py
 
   V3 — Roboterhund (Quadruped)
        12 DOF, lernt vorwärts laufen ohne umzufallen
-       → train_v3.py, demo_v3.py, eval_v3.py
 
-Jeder Button startet das passende Python-Skript im Hintergrund.
-Training = KI lernt die Aufgabe (dauert länger, speichert Modell)
-Demo     = Trainiertes Modell live ansehen (MuJoCo-Fenster)
-Eval     = Modell auswerten mit Statistiken (Erfolgsrate, Distanz)
+Buttons pro Version:
+  🚀 Training     KI lernt die Aufgabe (PPO). Dauert länger, speichert Modell.
+  🎮 Demo         Trainiertes Modell live im 3D-MuJoCo-Fenster ansehen.
+  📊 Eval         Modell auswerten mit Statistiken (Erfolgsrate, Distanz).
+  🖥️  3D-Ansicht  Nur die 3D-Welt ansehen (kein Modell nötig, zum Anschauen).
+  ⏹️  Stopp       Laufendes Training/Demo/Eval abbrechen.
 
 Kein Terminal nötig — einfach python gui_launcher.py oder doppelklick.
 ================================================================================
@@ -33,6 +32,7 @@ import platform
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
+from pathlib import Path
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,8 +49,13 @@ class RLLauncher(tk.Tk):
         super().__init__()
 
         self.title("Reinforcement-Learning-Lab — Roboterarm & Hund (RL)")
-        self.geometry("900x750")
+        self.geometry("1000x850")
         self.configure(bg="#1e2a38")
+
+        # Aktuell laufender Prozess (für Stop-Button)
+        self.current_proc = None
+        self.current_thread = None
+        self.is_running = False
 
         # Stil
         style = ttk.Style()
@@ -84,7 +89,7 @@ class RLLauncher(tk.Tk):
         style.configure(
             "TButton",
             font=("Segoe UI" if platform.system() == "Windows" else "Arial", 10, "bold"),
-            padding=10,
+            padding=8,
         )
 
         self._build_ui()
@@ -108,12 +113,12 @@ class RLLauncher(tk.Tk):
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        main = ttk.Frame(scrollable_frame, padding="30")
+        main = ttk.Frame(scrollable_frame, padding="25")
         main.pack(fill=tk.BOTH, expand=True)
 
         # ================= TITEL =================
         title_frame = ttk.Frame(main)
-        title_frame.pack(fill=tk.X, pady=(0, 30))
+        title_frame.pack(fill=tk.X, pady=(0, 25))
 
         ttk.Label(
             title_frame,
@@ -128,7 +133,7 @@ class RLLauncher(tk.Tk):
 
         # ================= HARDWARE INFO =================
         hw_frame = ttk.Frame(main)
-        hw_frame.pack(fill=tk.X, pady=(0, 30))
+        hw_frame.pack(fill=tk.X, pady=(0, 20))
 
         ttk.Label(
             hw_frame,
@@ -152,7 +157,7 @@ class RLLauncher(tk.Tk):
         # ================= SETUP STATUS =================
         self.venv_exists = os.path.exists(VENV_PYTHON)
         status_frame = ttk.Frame(main)
-        status_frame.pack(fill=tk.X, pady=(0, 30))
+        status_frame.pack(fill=tk.X, pady=(0, 20))
 
         if self.venv_exists:
             ttk.Label(
@@ -188,8 +193,9 @@ class RLLauncher(tk.Tk):
 
         legend_items = [
             ("🚀  Training", "KI lernt die Aufgabe (PPO-Algorithmus). Dauert länger, speichert das trainierte Modell ab."),
-            ("🎮  Demo", "Trainiertes Modell live im MuJoCo-Fenster ansehen. Sieht man den Roboter in 3D arbeiten."),
-            ("📊  Eval", "Modell auswerten mit Statistiken: Erfolgsrate, Distanz, Belohnung."),
+            ("🎮  Demo", "Trainiertes Modell live im 3D-MuJoCo-Fenster ansehen. Sieht man den Roboter in 3D arbeiten."),
+            ("📊  Eval", "Modell auswerten mit Statistiken: Erfolgsrate, Distanz, Belohnung über viele Episoden."),
+            ("🖥️  3D-Ansicht", "Nur die 3D-Welt ansehen (kein trainiertes Modell nötig). Zum Anschauen wie der Roboter aussieht."),
         ]
         for title, desc in legend_items:
             item_frame = ttk.Frame(legend_frame)
@@ -220,10 +226,16 @@ class RLLauncher(tk.Tk):
             main,
             "V1 — Einfacher Arm auf Rädern",
             "3-Achsen-Arm lernt Würfel greifen und in Box legen",
-            "~22% Erfolgsrate  •  CPU-ready  •  train.py / demo.py / eval.py",
-            self.start_v1_training,
-            self.start_v1_demo,
-            self.start_v1_eval,
+            "~22% Erfolgsrate  •  CPU-ready",
+            train_script="train.py",
+            demo_script="demo.py",
+            eval_script="eval.py",
+            view_script="view_v1.py",
+            model_path="./ppo_arm_logs_final/ppo_wheel_arm_final_v2",
+            cb_train=self.start_v1_training,
+            cb_demo=self.start_v1_demo,
+            cb_eval=self.start_v1_eval,
+            cb_view=self.start_v1_view,
         )
 
         ttk.Separator(main, orient="horizontal").pack(fill=tk.X, pady=25)
@@ -233,10 +245,16 @@ class RLLauncher(tk.Tk):
             main,
             "V2 — Arm mit 3 Werkzeugen",
             "Greifer, Sauger, Schaufel — 3 Objekte, 3 Boxen, Hindernisse",
-            "Werkzeugwechsel  •  Curriculum  •  Reward Shaping  •  train_v2.py / demo_v2.py / eval_v2.py",
-            self.start_v2_training,
-            self.start_v2_demo,
-            self.start_v2_eval,
+            "Werkzeugwechsel  •  Curriculum  •  Reward Shaping",
+            train_script="train_v2.py",
+            demo_script="demo_v2.py",
+            eval_script="eval_v2.py",
+            view_script="view_v2.py",
+            model_path="./ppo_arm_v2_logs/ppo_arm_v2_final",
+            cb_train=self.start_v2_training,
+            cb_demo=self.start_v2_demo,
+            cb_eval=self.start_v2_eval,
+            cb_view=self.start_v2_view,
         )
 
         ttk.Separator(main, orient="horizontal").pack(fill=tk.X, pady=25)
@@ -246,15 +264,41 @@ class RLLauncher(tk.Tk):
             main,
             "V3 — Roboterhund (Quadruped)",
             "12 DOF, lernt vorwärts laufen ohne umzufallen",
-            "Isaac Lab Ready  •  RTX GPU empfohlen  •  train_v3.py / demo_v3.py / eval_v3.py",
-            self.start_v3_training,
-            self.start_v3_demo,
-            self.start_v3_eval,
+            "Isaac Lab Ready  •  RTX GPU empfohlen",
+            train_script="train_v3.py",
+            demo_script="demo_v3.py",
+            eval_script="eval_v3.py",
+            view_script="view_v3.py",
+            model_path="./ppo_quadruped_logs/ppo_quadruped_final",
+            cb_train=self.start_v3_training,
+            cb_demo=self.start_v3_demo,
+            cb_eval=self.start_v3_eval,
+            cb_view=self.start_v3_view,
         )
+
+        # ================= STEUERUNG (Stop / Clear) =================
+        ctrl_frame = ttk.Frame(main)
+        ctrl_frame.pack(fill=tk.X, pady=(30, 10))
+
+        self.stop_btn = ttk.Button(
+            ctrl_frame,
+            text="⏹️  Stopp (laufendes Training abbrechen)",
+            command=self.stop_running,
+            width=35,
+            state="disabled",
+        )
+        self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
+
+        ttk.Button(
+            ctrl_frame,
+            text="🗑️  Log löschen",
+            command=self.clear_log,
+            width=15,
+        ).pack(side=tk.LEFT)
 
         # ================= LOG-BEREICH =================
         log_frame = ttk.Frame(main)
-        log_frame.pack(fill=tk.BOTH, expand=True, pady=(30, 0))
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=(20, 0))
 
         ttk.Label(
             log_frame,
@@ -264,7 +308,7 @@ class RLLauncher(tk.Tk):
         ).pack(anchor=tk.W)
         self.log = scrolledtext.ScrolledText(
             log_frame,
-            height=10,
+            height=12,
             bg="#2c3e50",
             fg="#ecf0f1",
             insertbackground="#ecf0f1",
@@ -281,11 +325,15 @@ class RLLauncher(tk.Tk):
         )
         self.status.pack(anchor=tk.W, pady=(10, 0))
 
-    def _add_version_card(self, parent, title, subtitle, details, cb_train, cb_demo, cb_eval):
+    # ------------------------------------------------------------------
+    # Karten-Bau
+    # ------------------------------------------------------------------
+    def _add_version_card(self, parent, title, subtitle, details,
+                          train_script, demo_script, eval_script, view_script,
+                          model_path, cb_train, cb_demo, cb_eval, cb_view):
         card = ttk.Frame(parent)
         card.pack(fill=tk.X, pady=10)
 
-        # Karten-Hintergrund-Effekt durch Rahmen
         card_inner = ttk.Frame(card)
         card_inner.pack(fill=tk.X, padx=2, pady=2)
 
@@ -309,37 +357,63 @@ class RLLauncher(tk.Tk):
             font=("Segoe UI" if platform.system() == "Windows" else "Arial", 8),
         ).pack(anchor=tk.W, pady=(0, 8))
 
-        # Buttons
-        btn_frame = ttk.Frame(card_inner)
-        btn_frame.pack(fill=tk.X, pady=(0, 8))
+        # Buttons (zwei Reihen)
+        btn_row1 = ttk.Frame(card_inner)
+        btn_row1.pack(fill=tk.X, pady=(0, 5))
+
+        state = "normal" if self.venv_exists else "disabled"
 
         ttk.Button(
-            btn_frame,
+            btn_row1,
             text="🚀  Training",
             command=cb_train,
-            width=16,
-        ).pack(side=tk.LEFT, padx=(0, 6))
+            width=14,
+            state=state,
+        ).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(
-            btn_frame,
+            btn_row1,
             text="🎮  Demo",
             command=cb_demo,
             width=12,
-        ).pack(side=tk.LEFT, padx=(0, 6))
+            state=state,
+        ).pack(side=tk.LEFT, padx=(0, 5))
         ttk.Button(
-            btn_frame,
+            btn_row1,
             text="📊  Eval",
             command=cb_eval,
             width=12,
+            state=state,
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(
+            btn_row1,
+            text="🖥️  3D-Ansicht",
+            command=cb_view,
+            width=14,
+            state=state,
         ).pack(side=tk.LEFT)
 
         if not self.venv_exists:
             ttk.Label(
-                btn_frame,
+                btn_row1,
                 text="  ⚠ Setup zuerst ausführen",
                 foreground="#e74c3c",
                 font=("Segoe UI" if platform.system() == "Windows" else "Arial", 8),
             ).pack(side=tk.LEFT, padx=(10, 0))
 
+        # Modell-Info unter den Buttons
+        model_exists = os.path.exists(model_path + ".zip") or os.path.exists(model_path)
+        model_color = "#2ecc71" if model_exists else "#e74c3c"
+        model_text = "✅ Modell vorhanden" if model_exists else "⚠️  Noch kein Modell trainiert (erst Training laufen lassen)"
+        ttk.Label(
+            card_inner,
+            text=f"  Modell: {model_text}",
+            foreground=model_color,
+            font=("Segoe UI" if platform.system() == "Windows" else "Arial", 8),
+        ).pack(anchor=tk.W, pady=(5, 8))
+
+    # ------------------------------------------------------------------
+    # GPU Check
+    # ------------------------------------------------------------------
     def _check_gpu(self) -> bool:
         try:
             result = subprocess.run(
@@ -349,12 +423,23 @@ class RLLauncher(tk.Tk):
         except Exception:
             return False
 
+    # ------------------------------------------------------------------
+    # Log
+    # ------------------------------------------------------------------
     def _log(self, text: str):
         self.log.insert(tk.END, text + "\n")
         self.log.see(tk.END)
         self.update_idletasks()
 
-    def _run_script(self, script_name: str, label: str):
+    def clear_log(self):
+        self.log.delete("1.0", tk.END)
+        self._log("Log gelöscht.")
+
+    # ------------------------------------------------------------------
+    # Skript ausführen (mit Modell-Check für Demo/Eval)
+    # ------------------------------------------------------------------
+    def _run_script(self, script_name: str, label: str, check_model: bool = False,
+                    model_path: str = None):
         if not self.venv_exists:
             messagebox.showerror(
                 "Umgebung nicht bereit",
@@ -375,9 +460,32 @@ class RLLauncher(tk.Tk):
             )
             return
 
-        # Buttons deaktivieren während Laufzeit (GUI friert nicht ein dank Thread)
-        self._set_buttons_enabled(False)
+        # Modell-Check für Demo und Eval
+        if check_model and model_path:
+            model_zip = model_path + ".zip"
+            if not (os.path.exists(model_zip) or os.path.exists(model_path)):
+                messagebox.showwarning(
+                    "Noch kein Modell trainiert",
+                    f"Für '{label}' wird ein trainiertes Modell benötigt.\n\n"
+                    f"Erwartet unter: {model_path}.zip\n\n"
+                    f"Bitte zuerst '🚀 Training' für diese Version laufen lassen, "
+                    f"dann erst '🎮 Demo' oder '📊 Eval'.",
+                )
+                return
 
+        # Wenn schon etwas läuft, abbrechen
+        if self.is_running:
+            messagebox.showwarning(
+                "Bereits läuft",
+                "Ein Prozess läuft bereits.\nBitte warten oder zuerst '⏹️ Stopp' klicken.",
+            )
+            return
+
+        # Buttons deaktivieren (außer Stopp)
+        self._set_buttons_enabled(False)
+        self.stop_btn.configure(state="normal")
+
+        self.is_running = True
         self.status.config(text=f"{label} läuft...", foreground="#f39c12")
         self._log(f">>> Starte {label}...")
         self._log(f">>> Python: {VENV_PYTHON}")
@@ -394,7 +502,10 @@ class RLLauncher(tk.Tk):
                     cwd=SCRIPT_DIR,
                     bufsize=1,
                 )
+                self.current_proc = proc
                 for line in proc.stdout:
+                    if not self.is_running:
+                        break
                     self.after(0, lambda l=line: self._log(l.rstrip()))
                 proc.wait()
                 rc = proc.returncode
@@ -402,21 +513,49 @@ class RLLauncher(tk.Tk):
             except Exception as e:
                 self.after(0, lambda: self._on_error(label, e))
 
-        thread = threading.Thread(target=_target, daemon=True)
-        thread.start()
+        self.current_thread = threading.Thread(target=_target, daemon=True)
+        self.current_thread.start()
+
+    def stop_running(self):
+        """Laufenden Prozess abbrechen."""
+        if not self.is_running:
+            return
+        self.is_running = False
+        if self.current_proc:
+            try:
+                self.current_proc.terminate()
+                self.current_proc.wait(timeout=5)
+            except Exception:
+                try:
+                    self.current_proc.kill()
+                except Exception:
+                    pass
+        self._log(">>> Prozess vom Benutzer gestoppt.")
+        self._on_finished("Gestoppt", -1)
 
     def _on_finished(self, label: str, rc: int):
+        self.is_running = False
+        self.current_proc = None
+        self.current_thread = None
         self._set_buttons_enabled(True)
+        self.stop_btn.configure(state="disabled")
         self._log("-" * 50)
         if rc == 0:
             self.status.config(text=f"{label} abgeschlossen ✅", foreground="#2ecc71")
             self._log(f">>> {label} erfolgreich beendet.\n")
+        elif rc == -1:
+            self.status.config(text="Gestoppt ⏹️", foreground="#e74c3c")
+            self._log(f">>> {label} wurde abgebrochen.\n")
         else:
             self.status.config(text=f"{label} Fehler ❌", foreground="#e74c3c")
             self._log(f">>> {label} mit Fehlercode {rc} beendet.\n")
 
     def _on_error(self, label: str, e: Exception):
+        self.is_running = False
+        self.current_proc = None
+        self.current_thread = None
         self._set_buttons_enabled(True)
+        self.stop_btn.configure(state="disabled")
         self.status.config(text="Fehler ❌", foreground="#e74c3c")
         self._log(f">>> Fehler: {e}\n")
         messagebox.showerror("Fehler", str(e))
@@ -437,18 +576,27 @@ class RLLauncher(tk.Tk):
 
     # === V1 ===
     def start_v1_training(self): self._run_script("train.py", "V1 Training")
-    def start_v1_demo(self): self._run_script("demo.py", "V1 Demo")
-    def start_v1_eval(self): self._run_script("eval.py", "V1 Eval")
+    def start_v1_demo(self): self._run_script("demo.py", "V1 Demo", check_model=True,
+                                                model_path="./ppo_arm_logs_final/ppo_wheel_arm_final_v2")
+    def start_v1_eval(self): self._run_script("eval.py", "V1 Eval", check_model=True,
+                                              model_path="./ppo_arm_logs_final/ppo_wheel_arm_final_v2")
+    def start_v1_view(self): self._run_script("view_v1.py", "V1 3D-Ansicht")
 
     # === V2 ===
     def start_v2_training(self): self._run_script("train_v2.py", "V2 Training")
-    def start_v2_demo(self): self._run_script("demo_v2.py", "V2 Demo")
-    def start_v2_eval(self): self._run_script("eval_v2.py", "V2 Eval")
+    def start_v2_demo(self): self._run_script("demo_v2.py", "V2 Demo", check_model=True,
+                                              model_path="./ppo_arm_v2_logs/ppo_arm_v2_final")
+    def start_v2_eval(self): self._run_script("eval_v2.py", "V2 Eval", check_model=True,
+                                              model_path="./ppo_arm_v2_logs/ppo_arm_v2_final")
+    def start_v2_view(self): self._run_script("view_v2.py", "V2 3D-Ansicht")
 
     # === V3 ===
     def start_v3_training(self): self._run_script("train_v3.py", "V3 Training")
-    def start_v3_demo(self): self._run_script("demo_v3.py", "V3 Demo")
-    def start_v3_eval(self): self._run_script("eval_v3.py", "V3 Eval")
+    def start_v3_demo(self): self._run_script("demo_v3.py", "V3 Demo", check_model=True,
+                                              model_path="./ppo_quadruped_logs/ppo_quadruped_final")
+    def start_v3_eval(self): self._run_script("eval_v3.py", "V3 Eval", check_model=True,
+                                              model_path="./ppo_quadruped_logs/ppo_quadruped_final")
+    def start_v3_view(self): self._run_script("view_v3.py", "V3 3D-Ansicht")
 
 
 if __name__ == "__main__":
