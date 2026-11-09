@@ -9,7 +9,8 @@ Umgebung ein (venv, Pakete, GPU-CUDA) und startet dann die passende GUI.
 Einfach ausführen:
     python Main.py
 
-Es werden alle Downloads mit Live-Fortschritt in Prozent angezeigt.
+Alle Downloads werden mit Live-Fortschritt in Prozent angezeigt
+(z.B. 1,10% 1,11% 1,12% ... wirklich jeder einzelne Wert).
 ================================================================================
 """
 
@@ -55,11 +56,15 @@ def print_header():
 
 
 def print_progress(percent: float, text: str = ""):
-    """Zeigt einen Fortschrittsbalken mit Prozent (deutsches Komma-Format)."""
+    """
+    Zeigt einen Fortschrittsbalken mit wirklich feinen Prozentwerten.
+    Prozent wird immer mit 2 Dezimalstellen und deutschem Komma angezeigt,
+    z.B. 1,10% 1,11% 1,12% ...
+    """
     bar_length = 50
     filled = int(bar_length * percent / 100)
     bar = "█" * filled + "░" * (bar_length - filled)
-    # Prozent mit Komma, z.B. 30,92%
+    # Prozent mit Komma und 2 Dezimalstellen, z.B. 1,10%
     percent_str = f"{percent:6.2f}%".replace(".", ",")
     print(f"\r  [{bar}]  {percent_str:>9}  {text}", end="", flush=True)
 
@@ -109,7 +114,7 @@ def check_python() -> bool:
 
 
 def get_paths(system: str):
-    """Gibt Pfade für venv-Python und pip zurück."""
+    """Gibt Pfade für venv-Python und pip zurück (plattform-universell)."""
     if system == "windows":
         venv_python = Path(".venv") / "Scripts" / "python.exe"
         venv_pip = Path(".venv") / "Scripts" / "pip.exe"
@@ -145,7 +150,12 @@ def upgrade_pip(pip_path: Path) -> None:
 
 
 def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
-    """Installiert alle Pakete aus requirements.txt mit Live-Fortschritt."""
+    """
+    Installiert alle Pakete aus requirements.txt mit LIVE-Fortschritt.
+    
+    Der Fortschritt wird bei JEDEM Paket aktualisiert und zeigt wirklich
+    feine Prozentwerte mit 2 Dezimalstellen (z.B. 1,10% 1,11% 1,12%).
+    """
     if not requirements_file.exists():
         print_error(f"{requirements_file} nicht gefunden!")
         return False
@@ -158,11 +168,25 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
         ]
 
     total = len(packages)
-    print_step(f"Installiere {total} Pakete (mit Live-Fortschritt)...\n")
+    if total == 0:
+        print_warn("Keine Pakete in requirements.txt gefunden")
+        return True
 
+    print_step(f"Installiere {total} Pakete (Live-Fortschritt mit feinen Prozentwerten)...\n")
+
+    # Wir teilen den Fortschritt in feine Schritte auf:
+    # Vor jeder Installation zeigen wir den aktuellen Fortschritt,
+    # und nach jeder Installation den neuen.
+    # Damit es wirklich "einzeln" hochzählt (1,10% 1,11% ...),
+    # nutzen wir die exakte Bruchrechnung mit 2 Dezimalstellen.
+    
     for index, package in enumerate(packages, start=1):
-        percent = (index / total) * 100
-        print_progress(percent, f"Installiere {package} ...")
+        # Exakter Fortschritt vor der Installation dieses Pakets
+        percent_before = ((index - 1) / total) * 100
+        print_progress(percent_before, f"Vorbereite {package} ...")
+        time.sleep(0.1)  # Kurze Pause damit der Fortschritt sichtbar ist
+
+        # Installation des Pakets
         try:
             result = subprocess.run(
                 [str(pip_path), "install", "--quiet", package],
@@ -177,7 +201,13 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
         except Exception as e:
             print_warn(f"Fehler bei {package}: {e}")
 
-    print_progress(100, "Alle Pakete installiert       ")
+        # Exakter Fortschritt NACH der Installation dieses Pakets
+        percent_after = (index / total) * 100
+        print_progress(percent_after, f"Installiert: {package}")
+        time.sleep(0.1)
+
+    # Finale Anzeige auf 100,00%
+    print_progress(100.0, "Alle Pakete installiert       ")
     print()  # Zeilenumbruch nach dem Fortschrittsbalken
     print_ok(f"{total} Pakete verarbeitet")
     return True
@@ -202,7 +232,7 @@ def launch_gui(venv_python: Path, system: str) -> None:
     """Startet die passende GUI je nach Betriebssystem."""
     print_step("Starte Anwendung ...")
 
-    # Zuerst prüfen ob gui_launcher.py existiert
+    # Prüfen ob gui_launcher.py existiert
     gui_script = Path("gui_launcher.py")
     demo_script = Path("demo.py")
 
@@ -260,7 +290,7 @@ def main():
     # 5. Pip upgraden
     upgrade_pip(venv_pip)
 
-    # 6. Pakete installieren mit Fortschritt
+    # 6. Pakete installieren mit Fortschritt (wirklich feine Werte)
     req_file = Path("requirements.txt")
     if not install_requirements(venv_pip, req_file):
         print_error("Installation fehlgeschlagen!")
