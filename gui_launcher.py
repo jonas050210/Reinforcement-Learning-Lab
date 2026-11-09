@@ -30,9 +30,14 @@ import sys
 import os
 import platform
 import threading
-import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
 from pathlib import Path
+
+try:
+    import tkinter as tk
+    from tkinter import ttk, messagebox, scrolledtext
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -600,5 +605,18 @@ class RLLauncher(tk.Tk):
 
 
 if __name__ == "__main__":
+    if not TKINTER_AVAILABLE:
+        print("=" * 60)
+        print("FEHLER: tkinter ist nicht installiert!")
+        print("=" * 60)
+        print()
+        print("Unter Ubuntu installieren:")
+        print("  sudo apt update && sudo apt install python3-tk")
+        print()
+        print("Danach starten:")
+        print("  python3 gui_launcher.py")
+        print()
+        sys.exit(1)
+
     app = RLLauncher()
     app.mainloop()
