@@ -6,11 +6,14 @@
 Erkennt automatisch Windows 11 oder Ubuntu/Linux, richtet die komplette
 Umgebung ein (venv, Pakete, GPU-CUDA) und startet dann die passende GUI.
 
+Beim ersten Start wird alles installiert. Bei jedem weiteren Start prüft
+Main.py ob alles bereits da ist und startet dann sofort die GUI — ohne
+erneute Installation.
+
 Einfach ausführen:
     python Main.py
-
-Alle Downloads werden mit Live-Fortschritt in Prozent angezeigt
-(z.B. 1,10% 1,11% 1,12% ... wirklich jeder einzelne Wert).
+    oder
+    python3 Main.py
 ================================================================================
 """
 
@@ -19,6 +22,7 @@ import sys
 import subprocess
 import platform
 import time
+import importlib.util
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -64,7 +68,6 @@ def print_progress(percent: float, text: str = ""):
     bar_length = 50
     filled = int(bar_length * percent / 100)
     bar = "█" * filled + "░" * (bar_length - filled)
-    # Prozent mit Komma und 2 Dezimalstellen, z.B. 1,10%
     percent_str = f"{percent:6.2f}%".replace(".", ",")
     print(f"\r  [{bar}]  {percent_str:>9}  {text}", end="", flush=True)
 
@@ -124,6 +127,53 @@ def get_paths(system: str):
     return venv_python, venv_pip
 
 
+def is_package_installed(python_path: Path, package_name: str) -> bool:
+    """Prüft ob ein Paket in der venv installiert ist."""
+    try:
+        result = subprocess.run(
+            [
+                str(python_path),
+                "-c",
+                f"import importlib.util; print(importlib.util.find_spec('{package_name}'))",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        return "None" not in result.stdout and result.stdout.strip() != ""
+    except Exception:
+        return False
+
+
+def check_installation_complete(venv_python: Path, venv_pip: Path) -> bool:
+    """Prüft ob venv existiert und alle Pakete installiert sind."""
+    if not venv_python.exists():
+        return False
+
+    # Wichtige Pakete prüfen
+    required_packages = [
+        "mujoco",
+        "gymnasium",
+        "stable_baselines3",
+        "torch",
+        "tensorboard",
+        "tqdm",
+        "rich",
+        "numpy",
+    ]
+
+    missing = []
+    for pkg in required_packages:
+        if not is_package_installed(venv_python, pkg):
+            missing.append(pkg)
+
+    if missing:
+        print_warn(f"Folgende Pakete fehlen: {', '.join(missing)}")
+        return False
+
+    return True
+
+
 def create_venv() -> bool:
     """Erstellt die virtuelle Umgebung."""
     print_step("Erstelle virtuelle Umgebung (.venv)...")
@@ -152,7 +202,7 @@ def upgrade_pip(pip_path: Path) -> None:
 def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
     """
     Installiert alle Pakete aus requirements.txt mit LIVE-Fortschritt.
-    
+
     Der Fortschritt wird bei JEDEM Paket aktualisiert und zeigt wirklich
     feine Prozentwerte mit 2 Dezimalstellen (z.B. 1,10% 1,11% 1,12%).
     """
@@ -174,17 +224,11 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
 
     print_step(f"Installiere {total} Pakete (Live-Fortschritt mit feinen Prozentwerten)...\n")
 
-    # Wir teilen den Fortschritt in feine Schritte auf:
-    # Vor jeder Installation zeigen wir den aktuellen Fortschritt,
-    # und nach jeder Installation den neuen.
-    # Damit es wirklich "einzeln" hochzählt (1,10% 1,11% ...),
-    # nutzen wir die exakte Bruchrechnung mit 2 Dezimalstellen.
-    
     for index, package in enumerate(packages, start=1):
         # Exakter Fortschritt vor der Installation dieses Pakets
         percent_before = ((index - 1) / total) * 100
         print_progress(percent_before, f"Vorbereite {package} ...")
-        time.sleep(0.1)  # Kurze Pause damit der Fortschritt sichtbar ist
+        time.sleep(0.05)
 
         # Installation des Pakets
         try:
@@ -204,7 +248,7 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
         # Exakter Fortschritt NACH der Installation dieses Pakets
         percent_after = (index / total) * 100
         print_progress(percent_after, f"Installiert: {package}")
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     # Finale Anzeige auf 100,00%
     print_progress(100.0, "Alle Pakete installiert       ")
@@ -232,7 +276,6 @@ def launch_gui(venv_python: Path, system: str) -> None:
     """Startet die passende GUI je nach Betriebssystem."""
     print_step("Starte Anwendung ...")
 
-    # Prüfen ob gui_launcher.py existiert
     gui_script = Path("gui_launcher.py")
     demo_script = Path("demo.py")
 
@@ -274,35 +317,40 @@ def main():
         input("\nDrücke Enter zum Beenden ...")
         sys.exit(1)
 
-    # 3. GPU prüfen (nur Info)
-    check_gpu()
-
-    # 4. Virtuelle Umgebung erstellen
+    # 3. Pfade bestimmen
     venv_python, venv_pip = get_paths(system)
 
-    if not Path(".venv").exists():
-        if not create_venv():
+    # 4. Prüfen ob Installation bereits vollständig ist
+    installation_complete = check_installation_complete(venv_python, venv_pip)
+
+    if installation_complete:
+        print_ok("Alle Pakete sind bereits installiert — starte direkt die GUI")
+        print()
+    else:
+        # 5. Virtuelle Umgebung erstellen (falls nötig)
+        if not Path(".venv").exists():
+            if not create_venv():
+                input("\nDrücke Enter zum Beenden ...")
+                sys.exit(1)
+        else:
+            print_ok("Virtuelle Umgebung existiert bereits")
+
+        # 6. Pip upgraden
+        upgrade_pip(venv_pip)
+
+        # 7. Pakete installieren mit Fortschritt
+        req_file = Path("requirements.txt")
+        if not install_requirements(venv_pip, req_file):
+            print_error("Installation fehlgeschlagen!")
             input("\nDrücke Enter zum Beenden ...")
             sys.exit(1)
-    else:
-        print_ok("Virtuelle Umgebung existiert bereits")
 
-    # 5. Pip upgraden
-    upgrade_pip(venv_pip)
+        # 8. Zusammenfassung
+        print(f"\n{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}")
+        print(f"{GREEN}  Setup abgeschlossen! Starte Anwendung ...{RESET}")
+        print(f"{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}\n")
 
-    # 6. Pakete installieren mit Fortschritt (wirklich feine Werte)
-    req_file = Path("requirements.txt")
-    if not install_requirements(venv_pip, req_file):
-        print_error("Installation fehlgeschlagen!")
-        input("\nDrücke Enter zum Beenden ...")
-        sys.exit(1)
-
-    # 7. Zusammenfassung
-    print(f"\n{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}")
-    print(f"{GREEN}  Setup abgeschlossen! Starte Anwendung ...{RESET}")
-    print(f"{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}\n")
-
-    # 8. GUI starten
+    # 9. GUI starten
     launch_gui(venv_python, system)
 
 
