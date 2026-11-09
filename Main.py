@@ -361,7 +361,25 @@ def main():
         print(f"{GREEN}  Setup abgeschlossen! Starte Anwendung ...{RESET}")
         print(f"{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}\n")
 
-    # 9. GUI starten
+    # 9. Prüfen ob tkinter verfügbar ist (für GUI nötig)
+    try:
+        import tkinter  # noqa: F401
+    except ImportError:
+        print_error("tkinter ist nicht installiert — GUI kann nicht geöffnet werden!")
+        print()
+        if system == "linux":
+            print(f"{YELLOW}  Unter Ubuntu installieren:{RESET}")
+            print(f"    sudo apt update && sudo apt install python3-tk")
+            print()
+            print(f"{YELLOW}  Danach starten:{RESET}")
+            print(f"    python3 Main.py")
+        elif system == "windows":
+            print(f"{YELLOW}  Unter Windows: Python neu installieren und 'tcl/tk und IDLE' anhaken.{RESET}")
+        print()
+        input("Drücke Enter zum Beenden ...")
+        sys.exit(1)
+
+    # 10. GUI starten
     launch_gui(venv_python, system)
 
 

@@ -278,28 +278,6 @@ def check_gpu() -> bool:
     return False
 
 
-def launch_main(venv_python: Path, system: str) -> None:
-    """Startet Main.py (oder main.py) mit dem venv-Python."""
-    print_step("Starte Anwendung (Main.py) ...")
-
-    # Plattform-universell: Main.py zuerst, dann main.py als Fallback
-    main_script = Path("Main.py")
-    if not main_script.exists():
-        main_script = Path("main.py")
-    if not main_script.exists():
-        print_error("Main.py nicht gefunden!")
-        return
-
-    print(f"{GREEN}  → Starte {main_script.name}{RESET}\n")
-
-    try:
-        subprocess.run([str(venv_python), str(main_script)], check=True)
-    except subprocess.CalledProcessError as e:
-        print_error(f"Das Programm wurde mit Fehlercode {e.returncode} beendet")
-    except KeyboardInterrupt:
-        print(f"\n{YELLOW}Abbruch durch Benutzer{RESET}")
-
-
 def create_windows_shortcut(system: str) -> None:
     """Erstellt einen Desktop-Shortcut unter Windows (nicht OneDrive)."""
     if system != "windows":
@@ -382,7 +360,7 @@ def main():
     installation_complete = check_installation_complete(venv_python, venv_pip)
 
     if installation_complete:
-        print_ok("Alle Pakete sind bereits installiert — starte direkt main.py")
+        print_ok("Alle Pakete sind bereits installiert")
         print()
     else:
         # 5. Virtuelle Umgebung erstellen (falls nötig)
@@ -405,19 +383,16 @@ def main():
 
         # 8. Zusammenfassung
         print(f"\n{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}")
-        print(f"{GREEN}  Setup abgeschlossen! Starte main.py ...{RESET}")
+        print(f"{GREEN}  Setup abgeschlossen!{RESET}")
+        print(f"{GREEN}  Starte die GUI mit:  python3 Main.py{RESET}")
         print(f"{GREEN}{BOLD}════════════════════════════════════════════════════════════════{RESET}\n")
 
     # 9. GPU prüfen (optional, informativ)
     check_gpu()
     print()
 
-    # 10. Windows-Desktop-Shortcut erstellen (nicht OneDrive)
+    # 10. Windows-Desktop-Shortcut erstellen (nur Windows, unter Ubuntu übersprungen)
     create_windows_shortcut(system)
-    print()
-
-    # 11. Main.py starten
-    launch_main(venv_python, system)
 
 
 if __name__ == "__main__":
