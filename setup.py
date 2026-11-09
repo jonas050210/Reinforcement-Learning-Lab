@@ -279,12 +279,15 @@ def check_gpu() -> bool:
 
 
 def launch_main(venv_python: Path, system: str) -> None:
-    """Startet main.py mit dem venv-Python."""
-    print_step("Starte Anwendung (main.py) ...")
+    """Startet Main.py (oder main.py) mit dem venv-Python."""
+    print_step("Starte Anwendung (Main.py) ...")
 
-    main_script = Path("main.py")
+    # Plattform-universell: Main.py zuerst, dann main.py als Fallback
+    main_script = Path("Main.py")
     if not main_script.exists():
-        print_error("main.py nicht gefunden!")
+        main_script = Path("main.py")
+    if not main_script.exists():
+        print_error("Main.py nicht gefunden!")
         return
 
     print(f"{GREEN}  → Starte {main_script.name}{RESET}\n")
@@ -295,6 +298,61 @@ def launch_main(venv_python: Path, system: str) -> None:
         print_error(f"Das Programm wurde mit Fehlercode {e.returncode} beendet")
     except KeyboardInterrupt:
         print(f"\n{YELLOW}Abbruch durch Benutzer{RESET}")
+
+
+def create_windows_shortcut(system: str) -> None:
+    """Erstellt einen Desktop-Shortcut unter Windows (nicht OneDrive)."""
+    if system != "windows":
+        return
+
+    try:
+        import winshell
+    except ImportError:
+        # winshell nicht verfügbar — Shortcut per PowerShell erstellen
+        try:
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            # OneDrive-Pfad vermeiden: prüfe ob Desktop in OneDrive liegt
+            if "OneDrive" in desktop:
+                desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            script_path = os.path.abspath("Main.py")
+            venv_python = os.path.abspath(str(Path(".venv") / "Scripts" / "python.exe"))
+            shortcut_path = os.path.join(desktop, "RL Lab.lnk")
+            ps_command = (
+                f"$ws = New-Object -ComObject WScript.Shell; "
+                f"$shortcut = $ws.CreateShortcut('{shortcut_path}'); "
+                f"$shortcut.TargetPath = '{venv_python}'; "
+                f"$shortcut.Arguments = '{script_path}'; "
+                f"$shortcut.WorkingDirectory = '{os.getcwd()}'; "
+                f"$shortcut.IconLocation = '{script_path},0'; "
+                f"$shortcut.Save()"
+            )
+            subprocess.run(
+                ["powershell", "-Command", ps_command],
+                capture_output=True,
+                text=True,
+            )
+            print_ok(f"Desktop-Shortcut erstellt: {shortcut_path}")
+        except Exception as e:
+            print_warn(f"Desktop-Shortcut konnte nicht erstellt werden: {e}")
+        return
+
+    try:
+        import winshell
+        from win32com.client import Dispatch
+        desktop = winshell.desktop()
+        path = os.path.join(desktop, "RL Lab.lnk")
+        shell = Dispatch('WScript.Shell')
+        shortcut = shell.CreateShortCut(path)
+        shortcut.Targetpath = str(Path(".venv") / "Scripts" / "python.exe")
+        shortcut.Arguments = "Main.py"
+        shortcut.WorkingDirectory = os.getcwd()
+        shortcut.IconLocation = str(Path("Main.py").absolute()) + ",0"
+        shortcut.save()
+        print_ok(f"Desktop-Shortcut erstellt: {path}")
+    except ImportError:
+        print_warn("winshell/pywin32 nicht installiert — kein Desktop-Shortcut erstellt")
+    except Exception as e:
+        print_warn(f"Desktop-Shortcut konnte nicht erstellt werden: {e}")
 
 
 def main():
@@ -354,7 +412,11 @@ def main():
     check_gpu()
     print()
 
-    # 10. main.py starten
+    # 10. Windows-Desktop-Shortcut erstellen (nicht OneDrive)
+    create_windows_shortcut(system)
+    print()
+
+    # 11. Main.py starten
     launch_main(venv_python, system)
 
 
