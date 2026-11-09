@@ -377,7 +377,7 @@ class RLLauncher(tk.Tk):
     def _add_version_card(self, parent, title, subtitle, details,
                           train_script, demo_script, eval_script, view_script,
                           model_path, cb_train, cb_demo, cb_eval, cb_view):
-        card = ttk.Frame(main, style="Panel.TFrame")
+        card = ttk.Frame(parent, style="Panel.TFrame")
         card.pack(fill=tk.X, pady=10, padx=5)
 
         card_inner = ttk.Frame(card, style="Panel.TFrame")
