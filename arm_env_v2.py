@@ -476,6 +476,9 @@ class WheelArm3ToolsEnv(gym.Env):
                     delta_box = self.prev_dist_to_box - dist_to_box
                     reward += 8.0 * delta_box
                 self.prev_dist_to_box = dist_to_box
+            else:
+                # Zurücksetzen wenn nicht mehr gehalten, damit kein falscher Delta beim nächsten Greifen entsteht
+                self.prev_dist_to_box = None
 
             # In Box (hohe Belohnung nur beim erstmaligen Eintritt, nicht jeden Schritt)
             box_just_entered = (

@@ -8,8 +8,19 @@
   <option timestep="0.005" gravity="0 0 -9.81" iterations="50" solver="CG"/>
 
   <worldbody>
-    <!-- Boden -->
-    <geom name="floor" type="plane" size="0 0 1" rgba="0.82 0.82 0.82 1"/>
+    <!-- Beleuchtung: Blender-Style 3-Point-Lighting -->
+    <light name="light_key" pos="3 3 5" dir="-3 -3 -5" directional="true" diffuse="0.9 0.9 0.9" specular="0.4 0.4 0.4"/>
+    <light name="light_fill" pos="-3 3 4" dir="3 -3 -4" directional="true" diffuse="0.5 0.5 0.5" specular="0.15 0.15 0.15"/>
+    <light name="light_back" pos="0 -3 4" dir="0 3 -4" directional="true" diffuse="0.4 0.4 0.4" specular="0.2 0.2 0.2"/>
+
+    <!-- Standard-Kamera für Blender-Style Locomotion-Ansicht -->
+    <camera name="blender_cam" pos="1.5 1.5 1.2" xyaxes="0.707 -0.707 0 0.353 0.353 -0.866" fovy="45"/>
+    <!-- Boden mit Schachbrett-Muster für bessere Orientierung -->
+    <geom name="floor" type="plane" size="0 0 1" rgba="0.85 0.85 0.85 1"/>
+
+    <!-- Gitter-Linien auf dem Boden (visuelle Referenz) -->
+    <geom name="grid_x1" type="plane" size="5 0.01 1" pos="0 0 0.001" rgba="0.6 0.6 0.6 0.5"/>
+    <geom name="grid_y1" type="plane" size="0.01 5 1" pos="0 0 0.001" rgba="0.6 0.6 0.6 0.5"/>
 
     <!-- === ROBOTERHUND (Unitree A1 ähnlich, 12 DOF) === -->
     <body name="trunk" pos="0 0 0.32">
@@ -31,8 +42,8 @@
             <geom name="calf_fl_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
 
             <body name="foot_fl" pos="0 0 -0.1">
-              <geom name="foot_fl_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
-              <site name="foot_fl_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+              <geom name="foot_fl_geom" type="sphere" size="0.025" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_fl_tip" pos="0 0 -0.025" size="0.004" rgba="1 0 0 1"/>
             </body>
           </body>
         </body>
@@ -52,8 +63,8 @@
             <geom name="calf_fr_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
 
             <body name="foot_fr" pos="0 0 -0.1">
-              <geom name="foot_fr_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
-              <site name="foot_fr_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+              <geom name="foot_fr_geom" type="sphere" size="0.025" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_fr_tip" pos="0 0 -0.025" size="0.004" rgba="1 0 0 1"/>
             </body>
           </body>
         </body>
@@ -73,8 +84,8 @@
             <geom name="calf_hl_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
 
             <body name="foot_hl" pos="0 0 -0.1">
-              <geom name="foot_hl_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
-              <site name="foot_hl_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+              <geom name="foot_hl_geom" type="sphere" size="0.025" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_hl_tip" pos="0 0 -0.025" size="0.004" rgba="1 0 0 1"/>
             </body>
           </body>
         </body>
@@ -94,8 +105,8 @@
             <geom name="calf_hr_geom" type="capsule" size="0.015 0.1" pos="0 0 -0.05" euler="0 0 1.57" rgba="0.85 0.85 0.2 1"/>
 
             <body name="foot_hr" pos="0 0 -0.1">
-              <geom name="foot_hr_geom" type="sphere" size="0.02" rgba="0.3 0.8 0.3 1"/>
-              <site name="foot_hr_tip" pos="0 0 -0.02" size="0.004" rgba="1 0 0 1"/>
+              <geom name="foot_hr_geom" type="sphere" size="0.025" rgba="0.3 0.8 0.3 1"/>
+              <site name="foot_hr_tip" pos="0 0 -0.025" size="0.004" rgba="1 0 0 1"/>
             </body>
           </body>
         </body>
