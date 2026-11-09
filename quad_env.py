@@ -144,9 +144,9 @@ class QuadrupedEnv(gym.Env):
 
     def _get_obs(self):
         # Rumpf Position und Orientierung
-        trunk_pos = self.data.body_xpos[self._ids["trunk"]].copy()
-        trunk_quat = self.data.body_xquat[self._ids["trunk"]].copy()
-        trunk_vel = self.data.body_xvel[self._ids["trunk"]].copy()
+        trunk_pos = self.data.xpos[self._ids["trunk"]].copy()
+        trunk_quat = self.data.xquat[self._ids["trunk"]].copy()
+        trunk_vel = self.data.cvel[self._ids["trunk"]].copy()
 
         # Gelenke
         joint_pos = []
@@ -159,7 +159,7 @@ class QuadrupedEnv(gym.Env):
         # Fußkontakt (vereinfacht: Höhe des Fußes über Boden)
         feet_contact = []
         for foot in ["foot_fl", "foot_fr", "foot_hl", "foot_hr"]:
-            foot_pos = self.data.body_xpos[self._ids[foot]].copy()
+            foot_pos = self.data.xpos[self._ids[foot]].copy()
             feet_contact.append(float(foot_pos[2] < 0.03))  # Nah am Boden
 
         # Zielgeschwindigkeit (vorwärts)
@@ -178,11 +178,11 @@ class QuadrupedEnv(gym.Env):
         return obs
 
     def _compute_reward(self):
-        trunk_pos = self.data.body_xpos[self._ids["trunk"]]
-        trunk_quat = self.data.body_xquat[self._ids["trunk"]]
+        trunk_pos = self.data.xpos[self._ids["trunk"]]
+        trunk_quat = self.data.xquat[self._ids["trunk"]]
 
         # Vorwärtsgeschwindigkeit (X-Richtung)
-        vx = self.data.body_xvel[self._ids["trunk"]][0]
+        vx = self.data.cvel[self._ids["trunk"]][0]
 
         # Aufrechte Haltung (Quaternion: w, x, y, z -> Roll/Pitch schätzen)
         # Vereinfacht: prüfe ob Rumpf nicht zu stark geneigt ist
@@ -231,7 +231,7 @@ class QuadrupedEnv(gym.Env):
         return float(reward), info
 
     def _is_fallen(self):
-        trunk_quat = self.data.body_xquat[self._ids["trunk"]]
+        trunk_quat = self.data.xquat[self._ids["trunk"]]
         # Wenn der Rumpf zu stark geneigt ist (w < 0.3), ist er umgefallen
         return bool(trunk_quat[0] < 0.3)
 

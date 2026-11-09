@@ -14,6 +14,7 @@ import subprocess
 import sys
 import os
 import platform
+import threading
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 
@@ -214,39 +215,65 @@ class RLLauncher(tk.Tk):
             )
             return
 
+        # Buttons deaktivieren während Laufzeit (GUI friert nicht ein dank Thread)
+        self._set_buttons_enabled(False)
+
         self.status.config(text=f"{label} läuft...", foreground="#f39c12")
         self._log(f">>> Starte {label}...")
         self._log(f">>> Python: {VENV_PYTHON}")
         self._log(f">>> Skript: {script_path}")
         self._log("-" * 50)
 
-        try:
-            proc = subprocess.Popen(
-                [VENV_PYTHON, script_path],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                cwd=SCRIPT_DIR,
-                bufsize=1,
-            )
+        def _target():
+            try:
+                proc = subprocess.Popen(
+                    [VENV_PYTHON, script_path],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    cwd=SCRIPT_DIR,
+                    bufsize=1,
+                )
+                for line in proc.stdout:
+                    self.after(0, lambda l=line: self._log(l.rstrip()))
+                proc.wait()
+                rc = proc.returncode
+                self.after(0, lambda: self._on_finished(label, rc))
+            except Exception as e:
+                self.after(0, lambda: self._on_error(label, e))
 
-            for line in proc.stdout:
-                self._log(line.rstrip())
+        thread = threading.Thread(target=_target, daemon=True)
+        thread.start()
 
-            proc.wait()
-            if proc.returncode == 0:
-                self.status.config(text=f"{label} abgeschlossen ✅", foreground="#2ecc71")
-                self._log("-" * 50)
-                self._log(f">>> {label} erfolgreich beendet.\n")
-            else:
-                self.status.config(text=f"{label} Fehler ❌", foreground="#e74c3c")
-                self._log("-" * 50)
-                self._log(f">>> {label} mit Fehlercode {proc.returncode} beendet.\n")
+    def _on_finished(self, label: str, rc: int):
+        self._set_buttons_enabled(True)
+        self._log("-" * 50)
+        if rc == 0:
+            self.status.config(text=f"{label} abgeschlossen ✅", foreground="#2ecc71")
+            self._log(f">>> {label} erfolgreich beendet.\n")
+        else:
+            self.status.config(text=f"{label} Fehler ❌", foreground="#e74c3c")
+            self._log(f">>> {label} mit Fehlercode {rc} beendet.\n")
 
-        except Exception as e:
-            self.status.config(text="Fehler ❌", foreground="#e74c3c")
-            self._log(f">>> Fehler: {e}\n")
-            messagebox.showerror("Fehler", str(e))
+    def _on_error(self, label: str, e: Exception):
+        self._set_buttons_enabled(True)
+        self.status.config(text="Fehler ❌", foreground="#e74c3c")
+        self._log(f">>> Fehler: {e}\n")
+        messagebox.showerror("Fehler", str(e))
+
+    def _set_buttons_enabled(self, enabled: bool):
+        state = "normal" if enabled else "disabled"
+        for widget in self.winfo_children():
+            self._set_ttk_button_state(widget, state)
+
+    def _set_ttk_button_state(self, widget, state: str):
+        if isinstance(widget, ttk.Button):
+            try:
+                widget.configure(state=state)
+            except Exception:
+                pass
+        for child in widget.winfo_children():
+            self._set_ttk_button_state(child, state)
 
     # === V1 ===
     def start_v1_training(self): self._run_script("train.py", "V1 Training")
@@ -255,13 +282,13 @@ class RLLauncher(tk.Tk):
 
     # === V2 ===
     def start_v2_training(self): self._run_script("train_v2.py", "V2 Training")
-    def start_v2_demo(self): self._run_script("demo.py", "V2 Demo")
-    def start_v2_eval(self): self._run_script("eval.py", "V2 Eval")
+    def start_v2_demo(self): self._run_script("demo_v2.py", "V2 Demo")
+    def start_v2_eval(self): self._run_script("eval_v2.py", "V2 Eval")
 
     # === V3 ===
     def start_v3_training(self): self._run_script("train_v3.py", "V3 Training")
-    def start_v3_demo(self): self._run_script("demo.py", "V3 Demo")
-    def start_v3_eval(self): self._run_script("eval.py", "V3 Eval")
+    def start_v3_demo(self): self._run_script("demo_v3.py", "V3 Demo")
+    def start_v3_eval(self): self._run_script("eval_v3.py", "V3 Eval")
 
 
 if __name__ == "__main__":

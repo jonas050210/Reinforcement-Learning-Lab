@@ -203,8 +203,8 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
     """
     Installiert alle Pakete aus requirements.txt mit LIVE-Fortschritt.
 
-    Der Fortschritt wird bei JEDEM Paket aktualisiert und zeigt wirklich
-    feine Prozentwerte mit 2 Dezimalstellen (z.B. 1,10% 1,11% 1,12%).
+    Der Fortschritt wird während jeder Paket-Installation fein abgestuft
+    angezeigt (0,00% 0,01% 0,02% ...) mit deutschem Komma-Format.
     """
     if not requirements_file.exists():
         print_error(f"{requirements_file} nicht gefunden!")
@@ -227,18 +227,30 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
     for index, package in enumerate(packages, start=1):
         # Exakter Fortschritt vor der Installation dieses Pakets
         percent_before = ((index - 1) / total) * 100
-        print_progress(percent_before, f"Vorbereite {package} ...")
-        time.sleep(0.05)
+        percent_after = (index / total) * 100
 
-        # Installation des Pakets
+        print_progress(percent_before, f"Vorbereite {package} ...")
+        time.sleep(0.03)
+
+        # Installation des Pakets mit feinem Live-Fortschritt währenddessen
         try:
-            result = subprocess.run(
-                [str(pip_path), "install", "--quiet", package],
-                capture_output=True,
+            proc = subprocess.Popen(
+                [str(pip_path), "install", package],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                timeout=600,
             )
-            if result.returncode != 0:
+
+            # Fein abgestufte Prozent-Animation solange pip läuft
+            current_pct = percent_before
+            step_size = 0.05  # 0,05%-Schritte für feine Anzeige
+            while proc.poll() is None:
+                current_pct = min(current_pct + step_size, percent_after - 0.01)
+                print_progress(current_pct, f"Installiere {package} ...")
+                time.sleep(0.02)
+
+            proc.wait()
+            if proc.returncode != 0:
                 print_warn(f"Paket {package} konnte nicht vollständig installiert werden")
         except subprocess.TimeoutExpired:
             print_warn(f"Timeout bei {package}")
@@ -246,9 +258,8 @@ def install_requirements(pip_path: Path, requirements_file: Path) -> bool:
             print_warn(f"Fehler bei {package}: {e}")
 
         # Exakter Fortschritt NACH der Installation dieses Pakets
-        percent_after = (index / total) * 100
         print_progress(percent_after, f"Installiert: {package}")
-        time.sleep(0.05)
+        time.sleep(0.03)
 
     # Finale Anzeige auf 100,00%
     print_progress(100.0, "Alle Pakete installiert       ")
