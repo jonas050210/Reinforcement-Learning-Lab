@@ -96,6 +96,7 @@ class WheelArm3ToolsEnv(gym.Env):
         self.tool_gripper_open = True
         self.objects_held = [False] * len(self.OBJECTS)
         self.objects_in_box = [False] * len(self.OBJECTS)
+        self.prev_objects_in_box = [False] * len(self.OBJECTS)  # für Belohnung nur beim Eintritt
         self.prev_dist_to_target = None
         self.prev_dist_to_box = None
         self.episode_successes = 0
@@ -171,7 +172,7 @@ class WheelArm3ToolsEnv(gym.Env):
         return self.data.site_xpos[self._ids[box_site]].copy()
 
     def _get_obstacle_pos(self, name):
-        return self.data.body_xpos[self._ids[name]].copy()
+        return self.data.xpos[self._ids[name]].copy()
 
     def _bodies_touching(self, body_a: str, body_b: str) -> bool:
         body_id_a = self._ids[body_a]
@@ -211,6 +212,7 @@ class WheelArm3ToolsEnv(gym.Env):
         self.tool_gripper_open = True
         self.objects_held = [False] * len(self.OBJECTS)
         self.objects_in_box = [False] * len(self.OBJECTS)
+        self.prev_objects_in_box = [False] * len(self.OBJECTS)
         self.prev_dist_to_target = None
         self.prev_dist_to_box = None
         self.episode_successes = 0
@@ -412,7 +414,7 @@ class WheelArm3ToolsEnv(gym.Env):
             np.array(qpos, dtype=np.float32),
             np.array(qvel, dtype=np.float32),
             tool_onehot,
-            *[item for sublist in obj_data for item in sublist],
+            *obj_data,
             tool_pos.astype(np.float32),
             np.array([dist_to_obj], dtype=np.float32),
             np.array([dist_to_box], dtype=np.float32),
@@ -475,11 +477,17 @@ class WheelArm3ToolsEnv(gym.Env):
                     reward += 8.0 * delta_box
                 self.prev_dist_to_box = dist_to_box
 
-            # In Box (hohe Belohnung)
-            if self.objects_in_box[target_idx]:
+            # In Box (hohe Belohnung nur beim erstmaligen Eintritt, nicht jeden Schritt)
+            box_just_entered = (
+                self.objects_in_box[target_idx]
+                and not self.prev_objects_in_box[target_idx]
+            )
+            if box_just_entered:
                 reward += 50.0
-                info["in_box"] = 1.0
                 self.episode_successes += 1
+                info["in_box"] = 1.0
+            elif self.objects_in_box[target_idx]:
+                info["in_box"] = 1.0  # bleibt in Box, aber keine Zusatz-Belohnung
             else:
                 info["in_box"] = 0.0
         else:
@@ -496,6 +504,9 @@ class WheelArm3ToolsEnv(gym.Env):
         info["current_tool"] = self.current_tool
         info["objects_in_box"] = sum(self.objects_in_box)
         info["n_active"] = self.n_active_objects
+
+        # Vorherigen Box-Zustand merken für nächste Belohnungs-Berechnung
+        self.prev_objects_in_box = self.objects_in_box.copy()
 
         return float(reward), info
 

@@ -57,7 +57,7 @@ def main():
     eval_env = WheelArm3ToolsEnv(render_mode=None, curriculum_stage=args.curriculum)
     eval_env = Monitor(eval_env)
 
-    stop_callback = StopTrainingOnRewardThreshold(reward_threshold=80.0, verbose=1)
+    stop_callback = StopTrainingOnRewardThreshold(reward_threshold=200.0, verbose=1)
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=log_dir,
